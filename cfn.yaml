@@ -49,6 +49,7 @@ Resources:
               Action:
                 - lambda:InvokeFunction
               Resource: "*"
+
   GetCutOffDatesLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -68,6 +69,36 @@ Resources:
       Role: !GetAtt ExecutionRole.Arn
       Runtime: java8
       Timeout: 60
+
+  NewsletterCutOffDateQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: newsletter-newsletter-cut-off-date
+      VisibilityTimeout: 100
+      MessageRetentionPeriod: 3600 # 1 hour
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt NewsletterCutOffDateDlq.Arn
+        maxReceiveCount: 5
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Stack
+          Value: !Ref Stack
+        - Key: App
+          Value: !Ref App
+
+  NewsletterCutOffDateDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: newsletter-newsletter-cut-off-date-dlq
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Stack
+          Value: !Ref Stack
+        - Key: App
+          Value: !Ref App
+
   GetCleanseListLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -87,6 +118,36 @@ Resources:
       Role: !GetAtt ExecutionRole.Arn
       Runtime: java8
       Timeout: 60
+
+  CleanseListQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: newsletter-cleanse-list
+      VisibilityTimeout: 100
+      MessageRetentionPeriod: 3600 # 1 hour
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt CleanseListDlq.Arn
+        maxReceiveCount: 5
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Stack
+          Value: !Ref Stack
+        - Key: App
+          Value: !Ref App
+
+  CleanseListDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: newsletter-cleanse-list-dlq
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Stack
+          Value: !Ref Stack
+        - Key: App
+          Value: !Ref App
+
   UpdateBrazeUsersLambda:
     Type: AWS::Lambda::Function
     Properties:
