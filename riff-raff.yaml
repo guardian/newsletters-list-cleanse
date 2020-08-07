@@ -2,7 +2,7 @@ stacks: [identity]
 regions: [eu-west-1]
 
 deployments:
-  getCutOffdates:
+  newsletter-list-cleanse:
     type: aws-lambda
     parameters:
       bucket: identity-lambda
