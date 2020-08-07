@@ -114,12 +114,12 @@ Resources:
       ScheduleExpression: cron(14 3 * * ? *)
       Targets:
         - Id: Lambda
-          Arn: !GetAtt Lambda.Arn
+          Arn: !GetAtt GetCutOffDatesLambda.Arn
 
   DailyEventLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt Lambda.Arn
+      FunctionName: !GetAtt GetCutOffDatesLambda.Arn
       Principal: events.amazonaws.com
       SourceArn: !GetAtt DailyEvent.Arn
