@@ -1,0 +1,19 @@
+stacks: [identity]
+regions: [eu-west-1]
+
+deployments:
+  newsletter-list-cleanse:
+    type: aws-lambda
+    parameters:
+      bucket: identity-lambda
+      functionNames: [newsletter-list-cleanse-]
+      fileName: newsletter-list-cleanse.jar
+      prefixStack: false
+    dependencies: [newsletter-list-cleanse-cfn]
+  newsletter-list-cleanse-cfn:
+    type: cloud-formation
+    app: newsletter-list-cleanse
+    parameters:
+      prependStackToCloudFormationStackName: false
+      cloudFormationStackName: newsletter-list-cleanse
+      templatePath: cfn.yaml
