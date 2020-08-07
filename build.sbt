@@ -18,15 +18,15 @@ scalacOptions ++= Seq(
   "-Ywarn-dead-code"
 )
 
+
+enablePlugins(RiffRaffArtifact)
+
 libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-lambda-java-core" % "1.2.1",
   "com.amazonaws" % "aws-lambda-java-log4j2" % "1.2.0",
   "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3",
   "org.slf4j" % "slf4j-api" % "1.7.30"
 )
-
-enablePlugins(RiffRaffArtifact)
-
 assemblyJarName := s"${name.value}.jar"
 assemblyMergeStrategy in assembly := {
   case "META-INF/MANIFEST.MF" => MergeStrategy.discard
@@ -37,3 +37,12 @@ riffRaffPackageType := assembly.value
 riffRaffUploadArtifactBucket := Option("riffraff-artifact")
 riffRaffUploadManifestBucket := Option("riffraff-builds")
 riffRaffArtifactResources += (file("cfn.yaml"), s"${name.value}-cfn/cfn.yaml")
+
+
+
+
+
+
+
+
+

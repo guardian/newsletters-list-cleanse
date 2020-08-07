@@ -1,13 +1,13 @@
 package com.gu.newsletterlistcleanse
 
 import com.amazonaws.services.lambda.runtime.Context
-import org.slf4j.{Logger, LoggerFactory}
+import org.slf4j.{ Logger, LoggerFactory }
 
 /**
-  * This is compatible with aws' lambda JSON to POJO conversion.
-  * You can test your lambda by sending it the following payload:
-  * {"name": "Bob"}
-  */
+ * This is compatible with aws' lambda JSON to POJO conversion.
+ * You can test your lambda by sending it the following payload:
+ * {"name": "Bob"}
+ */
 class LambdaInput() {
   var name: String = _
   def getName(): String = name
@@ -22,8 +22,7 @@ object Env {
   def apply(): Env = Env(
     Option(System.getenv("App")).getOrElse("DEV"),
     Option(System.getenv("Stack")).getOrElse("DEV"),
-    Option(System.getenv("Stage")).getOrElse("DEV")
-  )
+    Option(System.getenv("Stage")).getOrElse("DEV"))
 }
 
 object Lambda {

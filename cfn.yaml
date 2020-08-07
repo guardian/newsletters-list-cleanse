@@ -49,10 +49,10 @@ Resources:
               Action:
                 - lambda:InvokeFunction
               Resource: "*"
-  Lambda:
+  GetCutOffDatesLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${App}-${Stage}
+      FunctionName: !Sub newsletter-get-cut-off-dates-${Stage}
       Code:
         S3Bucket:
           Ref: DeployBucket
@@ -63,7 +63,45 @@ Resources:
           Stack: !Ref Stack
           App: !Ref App
       Description: A monthly job to clean newsletter mailing lists of lapsed subscribers.
-      Handler: com.gu.newsletterlistcleanse.Lambda::handler
+      Handler: com.gu.newsletterlistcleanse.GetCutOffDatesLambda::handler
+      MemorySize: 1024
+      Role: !GetAtt ExecutionRole.Arn
+      Runtime: java8
+      Timeout: 60
+  GetCleanseListLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub newsletter-get-cleanse-list-${Stage}
+      Code:
+        S3Bucket:
+          Ref: DeployBucket
+        S3Key: !Sub ${Stack}/${Stage}/${App}/${App}.jar
+      Environment:
+        Variables:
+          Stage: !Ref Stage
+          Stack: !Ref Stack
+          App: !Ref App
+      Description: A monthly job to clean newsletter mailing lists of lapsed subscribers.
+      Handler: com.gu.newsletterlistcleanse.GetCleanseListLambda::handler
+      MemorySize: 1024
+      Role: !GetAtt ExecutionRole.Arn
+      Runtime: java8
+      Timeout: 60
+  UpdateBrazeUsersLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub newsletter-update-braze-users-${Stage}
+      Code:
+        S3Bucket:
+          Ref: DeployBucket
+        S3Key: !Sub ${Stack}/${Stage}/${App}/${App}.jar
+      Environment:
+        Variables:
+          Stage: !Ref Stage
+          Stack: !Ref Stack
+          App: !Ref App
+      Description: A monthly job to clean newsletter mailing lists of lapsed subscribers.
+      Handler: com.gu.newsletterlistcleanse.UpdateBrazeUsersLambda::handler
       MemorySize: 1024
       Role: !GetAtt ExecutionRole.Arn
       Runtime: java8
