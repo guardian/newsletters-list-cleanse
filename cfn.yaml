@@ -61,6 +61,7 @@ Resources:
                 - sqs:ReceiveMessage
                 - sqs:SendMessage
                 - sqs:SendMessageBatch
+                - sqs:GetQueueAttributes
               Resource:
                 - !GetAtt NewsletterCutOffDateQueue.Arn
                 - !GetAtt CleanseListQueue.Arn
