@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: A monthly job to clean newsletter mailing lists of lapsed subscribers.
+
 Parameters:
   Stack:
     Description: Stack name
@@ -20,6 +21,7 @@ Parameters:
     Description: Bucket where RiffRaff uploads artifacts on deploy
     Type: String
     Default: identity-lambda
+
 Resources:
   ExecutionRole:
     Type: AWS::IAM::Role
@@ -49,10 +51,25 @@ Resources:
               Action:
                 - lambda:InvokeFunction
               Resource: "*"
-  Lambda:
+        - PolicyName: sqs
+          PolicyDocument:
+            Statement:
+              Effect: Allow
+              Action:
+                - sqs:DeleteMessage
+                - sqs:DeleteMessageBatch
+                - sqs:ReceiveMessage
+                - sqs:SendMessage
+                - sqs:SendMessageBatch
+                - sqs:GetQueueAttributes
+              Resource:
+                - !GetAtt NewsletterCutOffDateQueue.Arn
+                - !GetAtt CleanseListQueue.Arn
+
+  GetCutOffDatesLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub ${App}-${Stage}
+      FunctionName: !Sub newsletter-cleanse-get-cut-off-dates-${Stage}
       Code:
         S3Bucket:
           Ref: DeployBucket
@@ -63,7 +80,127 @@ Resources:
           Stack: !Ref Stack
           App: !Ref App
       Description: A monthly job to clean newsletter mailing lists of lapsed subscribers.
-      Handler: com.gu.newsletterlistcleanse.Lambda::handler
+      Handler: com.gu.newsletterlistcleanse.GetCutOffDatesLambda::handler
+      MemorySize: 1024
+      Role: !GetAtt ExecutionRole.Arn
+      Runtime: java8
+      Timeout: 60
+
+  NewsletterCutOffDateQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub newsletter-newsletter-cut-off-date-${Stage}
+      VisibilityTimeout: 100
+      MessageRetentionPeriod: 3600 # 1 hour
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt NewsletterCutOffDateDlq.Arn
+        maxReceiveCount: 5
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Stack
+          Value: !Ref Stack
+        - Key: App
+          Value: !Ref App
+
+  NewsletterCutOffDateDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub newsletter-newsletter-cut-off-date-dlq-${Stage}
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Stack
+          Value: !Ref Stack
+        - Key: App
+          Value: !Ref App
+
+  NewsletterCutOffDateEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn:
+      - NewsletterCutOffDateQueue
+      - GetCutOffDatesLambda
+    Properties:
+      BatchSize: 1
+      Enabled: True
+      EventSourceArn: !GetAtt NewsletterCutOffDateQueue.Arn
+      FunctionName: !Sub newsletter-cleanse-get-cleanse-list-${Stage}
+
+  GetCleanseListLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub newsletter-cleanse-get-cleanse-list-${Stage}
+      Code:
+        S3Bucket:
+          Ref: DeployBucket
+        S3Key: !Sub ${Stack}/${Stage}/${App}/${App}.jar
+      Environment:
+        Variables:
+          Stage: !Ref Stage
+          Stack: !Ref Stack
+          App: !Ref App
+      Description: A monthly job to clean newsletter mailing lists of lapsed subscribers.
+      Handler: com.gu.newsletterlistcleanse.GetCleanseListLambda::handler
+      MemorySize: 1024
+      Role: !GetAtt ExecutionRole.Arn
+      Runtime: java8
+      Timeout: 60
+
+  CleanseListQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub newsletter-cleanse-list-${Stage}
+      VisibilityTimeout: 100
+      MessageRetentionPeriod: 3600 # 1 hour
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt CleanseListDlq.Arn
+        maxReceiveCount: 5
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Stack
+          Value: !Ref Stack
+        - Key: App
+          Value: !Ref App
+
+  CleanseListDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub newsletter-cleanse-list-dlq-${Stage}
+      Tags:
+        - Key: Stage
+          Value: !Ref Stage
+        - Key: Stack
+          Value: !Ref Stack
+        - Key: App
+          Value: !Ref App
+
+  CleanseListEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn:
+      - CleanseListQueue
+      - UpdateBrazeUsersLambda
+    Properties:
+      BatchSize: 1
+      Enabled: True
+      EventSourceArn: !GetAtt NewsletterCutOffDateQueue.Arn
+      FunctionName: !Sub newsletter-cleanse-update-braze-users-${Stage}
+
+  UpdateBrazeUsersLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub newsletter-cleanse-update-braze-users-${Stage}
+      Code:
+        S3Bucket:
+          Ref: DeployBucket
+        S3Key: !Sub ${Stack}/${Stage}/${App}/${App}.jar
+      Environment:
+        Variables:
+          Stage: !Ref Stage
+          Stack: !Ref Stack
+          App: !Ref App
+      Description: A monthly job to clean newsletter mailing lists of lapsed subscribers.
+      Handler: com.gu.newsletterlistcleanse.UpdateBrazeUsersLambda::handler
       MemorySize: 1024
       Role: !GetAtt ExecutionRole.Arn
       Runtime: java8
@@ -76,12 +213,12 @@ Resources:
       ScheduleExpression: cron(14 3 * * ? *)
       Targets:
         - Id: Lambda
-          Arn: !GetAtt Lambda.Arn
+          Arn: !GetAtt GetCutOffDatesLambda.Arn
 
   DailyEventLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
-      FunctionName: !GetAtt Lambda.Arn
+      FunctionName: !GetAtt GetCutOffDatesLambda.Arn
       Principal: events.amazonaws.com
       SourceArn: !GetAtt DailyEvent.Arn
