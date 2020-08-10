@@ -18,7 +18,6 @@ scalacOptions ++= Seq(
   "-Ywarn-dead-code"
 )
 
-
 enablePlugins(RiffRaffArtifact)
 
 libraryDependencies ++= Seq(
@@ -37,12 +36,3 @@ riffRaffPackageType := assembly.value
 riffRaffUploadArtifactBucket := Option("riffraff-artifact")
 riffRaffUploadManifestBucket := Option("riffraff-builds")
 riffRaffArtifactResources += (file("cfn.yaml"), s"${name.value}-cfn/cfn.yaml")
-
-
-
-
-
-
-
-
-
