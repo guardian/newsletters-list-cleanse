@@ -51,6 +51,14 @@ Resources:
               Action:
                 - lambda:InvokeFunction
               Resource: "*"
+        - PolicyName: sqs
+          PolicyDocument:
+            Statement:
+              Effect: Allow
+              Action: sqs:*
+              Resource:
+                - !GetAtt NewsletterCutOffDateQueue.Arn
+                - !GetAtt CleanseListQueue.Arn
 
   GetCutOffDatesLambda:
     Type: AWS::Lambda::Function
