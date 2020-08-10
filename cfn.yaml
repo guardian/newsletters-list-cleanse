@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: A monthly job to clean newsletter mailing lists of lapsed subscribers.
+
 Parameters:
   Stack:
     Description: Stack name
@@ -20,6 +21,7 @@ Parameters:
     Description: Bucket where RiffRaff uploads artifacts on deploy
     Type: String
     Default: identity-lambda
+
 Resources:
   ExecutionRole:
     Type: AWS::IAM::Role
@@ -99,6 +101,17 @@ Resources:
         - Key: App
           Value: !Ref App
 
+  NewsletterCutOffDateEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn:
+      - NewsletterCutOffDateQueue
+      - GetCutOffDatesLambda
+    Properties:
+      BatchSize: 1
+      Enabled: True
+      EventSourceArn: !GetAtt NewsletterCutOffDateQueue.Arn
+      FunctionName: !Sub newsletter-get-cleanse-list-${Stage}
+
   GetCleanseListLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -147,6 +160,17 @@ Resources:
           Value: !Ref Stack
         - Key: App
           Value: !Ref App
+
+  CleanseListEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn:
+      - CleanseListQueue
+      - UpdateBrazeUsersLambda
+    Properties:
+      BatchSize: 1
+      Enabled: True
+      EventSourceArn: !GetAtt NewsletterCutOffDateQueue.Arn
+      FunctionName: !Sub newsletter-update-braze-users-${Stage}
 
   UpdateBrazeUsersLambda:
     Type: AWS::Lambda::Function
