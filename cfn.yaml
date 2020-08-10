@@ -55,7 +55,12 @@ Resources:
           PolicyDocument:
             Statement:
               Effect: Allow
-              Action: sqs:*
+              Action:
+                - sqs:DeleteMessage
+                - sqs:DeleteMessageBatch
+                - sqs:ReceiveMessage
+                - sqs:SendMessage
+                - sqs:SendMessageBatch
               Resource:
                 - !GetAtt NewsletterCutOffDateQueue.Arn
                 - !GetAtt CleanseListQueue.Arn
