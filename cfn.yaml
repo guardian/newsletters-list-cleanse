@@ -68,7 +68,7 @@ Resources:
   GetCutOffDatesLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub newsletter-get-cut-off-dates-${Stage}
+      FunctionName: !Sub newsletter-cleanse-get-cut-off-dates-${Stage}
       Code:
         S3Bucket:
           Ref: DeployBucket
@@ -88,7 +88,7 @@ Resources:
   NewsletterCutOffDateQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: newsletter-newsletter-cut-off-date
+      QueueName: !Sub newsletter-newsletter-cut-off-date-${Stage}
       VisibilityTimeout: 100
       MessageRetentionPeriod: 3600 # 1 hour
       RedrivePolicy:
@@ -105,7 +105,7 @@ Resources:
   NewsletterCutOffDateDlq:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: newsletter-newsletter-cut-off-date-dlq
+      QueueName: !Sub newsletter-newsletter-cut-off-date-dlq-${Stage}
       Tags:
         - Key: Stage
           Value: !Ref Stage
@@ -123,12 +123,12 @@ Resources:
       BatchSize: 1
       Enabled: True
       EventSourceArn: !GetAtt NewsletterCutOffDateQueue.Arn
-      FunctionName: !Sub newsletter-get-cleanse-list-${Stage}
+      FunctionName: !Sub newsletter-cleanse-get-cleanse-list-${Stage}
 
   GetCleanseListLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub newsletter-get-cleanse-list-${Stage}
+      FunctionName: !Sub newsletter-cleanse-get-cleanse-list-${Stage}
       Code:
         S3Bucket:
           Ref: DeployBucket
@@ -148,7 +148,7 @@ Resources:
   CleanseListQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: newsletter-cleanse-list
+      QueueName: !Sub newsletter-cleanse-list-${Stage}
       VisibilityTimeout: 100
       MessageRetentionPeriod: 3600 # 1 hour
       RedrivePolicy:
@@ -165,7 +165,7 @@ Resources:
   CleanseListDlq:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: newsletter-cleanse-list-dlq
+      QueueName: !Sub newsletter-cleanse-list-dlq-${Stage}
       Tags:
         - Key: Stage
           Value: !Ref Stage
@@ -183,12 +183,12 @@ Resources:
       BatchSize: 1
       Enabled: True
       EventSourceArn: !GetAtt NewsletterCutOffDateQueue.Arn
-      FunctionName: !Sub newsletter-update-braze-users-${Stage}
+      FunctionName: !Sub newsletter-cleanse-update-braze-users-${Stage}
 
   UpdateBrazeUsersLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: !Sub newsletter-update-braze-users-${Stage}
+      FunctionName: !Sub newsletter-cleanse-update-braze-users-${Stage}
       Code:
         S3Bucket:
           Ref: DeployBucket
