@@ -9,7 +9,7 @@ description:= "A monthly job to clean newsletter mailing lists of lapsed subscri
 
 version := "1.0"
 
-scalaVersion := "2.13.3"
+scalaVersion := "2.12.12"
 
 scalacOptions ++= Seq(
   "-deprecation",
@@ -21,6 +21,7 @@ scalacOptions ++= Seq(
 enablePlugins(RiffRaffArtifact)
 
 libraryDependencies ++= Seq(
+  "com.gu.identity" %% "identity-model" % "3.221",
   "com.amazonaws" % "aws-lambda-java-core" % "1.2.1",
   "com.amazonaws" % "aws-lambda-java-log4j2" % "1.2.0",
   "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3",
