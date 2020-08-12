@@ -21,7 +21,7 @@ object UpdateBrazeUsersLambda {
   /*
    * This is your lambda entry point
    */
-  def handler(lambdaInput: GetCleanseListLambdaInput, context: Context): Unit = {
+  def handler(lambdaInput: UpdateBrazeUsersLambdaInput, context: Context): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
     logger.info(process(lambdaInput.name, env))
