@@ -1,7 +1,9 @@
 package com.gu.newsletterlistcleanse
 
 import com.amazonaws.services.lambda.runtime.Context
+import com.gu.newsletterlistcleanse.db.{ CampaignSentDates, DataLake }
 import org.slf4j.{ Logger, LoggerFactory }
+import scalikejdbc._
 
 /**
  * This is compatible with aws' lambda JSON to POJO conversion.
@@ -16,21 +18,41 @@ class GetCleanseListLambdaInput() {
 
 object GetCleanseListLambda {
 
+  DataLake.init()
+
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  /*
-   * This is your lambda entry point
-   */
   def handler(lambdaInput: GetCleanseListLambdaInput, context: Context): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
     logger.info(process(lambdaInput.name, env))
   }
 
-  /*
-   * I recommend to put your logic outside of the handler
-   */
-  def process(name: String, env: Env): String = s"Hello $name! (from ${env.app} in ${env.stack})\n"
+  def process(name: String, env: Env): String = {
+
+    val result = DB.readOnly { implicit session =>
+      sql"""
+        SELECT campaign_name, campaign_id, timestamp FROM (
+          SELECT row_number() over(partition by campaign_name) AS rn, *
+          FROM (
+            SELECT
+              campaign_name,
+              campaign_id,
+              timestamp
+            FROM
+              "clean"."braze_dispatch"
+            where campaign_name in ('Editorial_AnimalsFarmed')
+            order by timestamp desc
+          )
+        )
+        WHERE rn <= 94
+      """.map(CampaignSentDates.fromRow).list().apply()
+    }
+
+    logger.info(s"result: ${result}")
+
+    s"Hello $name! (from ${env.app} in ${env.stack})\n"
+  }
 }
 
 object TestGetCleanseList {
