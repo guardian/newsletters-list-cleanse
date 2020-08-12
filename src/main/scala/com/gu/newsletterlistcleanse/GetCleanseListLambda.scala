@@ -1,15 +1,11 @@
 package com.gu.newsletterlistcleanse
 
 import com.amazonaws.services.lambda.runtime.Context
-import com.gu.newsletterlistcleanse.db.{ CampaignSentDates, DataLake }
+import com.gu.newsletterlistcleanse.db.CampaignSentDates
 import org.slf4j.{ Logger, LoggerFactory }
 import scalikejdbc._
+import scalikejdbc.athena._
 
-/**
- * This is compatible with aws' lambda JSON to POJO conversion.
- * You can test your lambda by sending it the following payload:
- * {"name": "Bob"}
- */
 class GetCleanseListLambdaInput() {
   var name: String = _
   def getName(): String = name
@@ -17,8 +13,6 @@ class GetCleanseListLambdaInput() {
 }
 
 object GetCleanseListLambda {
-
-  DataLake.init()
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -30,7 +24,9 @@ object GetCleanseListLambda {
 
   def process(name: String, env: Env): String = {
 
-    val result = DB.readOnly { implicit session =>
+    val newsletters = List("Editorial_AnimalsFarmed")
+
+    val result = DB.athena { implicit session =>
       sql"""
         SELECT campaign_name, campaign_id, timestamp FROM (
           SELECT row_number() over(partition by campaign_name) AS rn, *
@@ -41,7 +37,7 @@ object GetCleanseListLambda {
               timestamp
             FROM
               "clean"."braze_dispatch"
-            where campaign_name in ('Editorial_AnimalsFarmed')
+            where campaign_name in ($newsletters)
             order by timestamp desc
           )
         )
