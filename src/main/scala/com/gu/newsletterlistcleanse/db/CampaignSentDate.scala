@@ -5,16 +5,17 @@ import java.time.format.DateTimeFormatter
 
 import scalikejdbc.WrappedResultSet
 
-case class CampaignSentDates(
+case class CampaignSentDate(
   campaignId: String,
   campaignName: String,
-  timestamp: ZonedDateTime)
+  timestamp: ZonedDateTime
+)
 
-object CampaignSentDates {
+object CampaignSentDate {
 
   val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneId.of("UTC"))
 
-  def fromRow(rs: WrappedResultSet): CampaignSentDates = CampaignSentDates(
+  def fromRow(rs: WrappedResultSet): CampaignSentDate = CampaignSentDate(
     campaignId = rs.string("campaign_id"),
     campaignName = rs.string("campaign_name"),
     timestamp = ZonedDateTime.from(formatter.parse(rs.string("timestamp"))))

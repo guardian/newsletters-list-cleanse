@@ -4,11 +4,11 @@ import scalikejdbc._
 import scalikejdbc.athena._
 
 trait Campaigns {
-  def fetchCampaignSentDates(campaignNames: List[String]): List[CampaignSentDates]
+  def fetchCampaignSentDates(campaignNames: List[String]): List[CampaignSentDate]
 }
 
 class CampaignsFromDB extends Campaigns {
-  override def fetchCampaignSentDates(campaignNames: List[String]): List[CampaignSentDates] = {
+  override def fetchCampaignSentDates(campaignNames: List[String]): List[CampaignSentDate] = {
     DB.athena { implicit session =>
       sql"""
         SELECT campaign_name, campaign_id, timestamp FROM (
@@ -25,7 +25,7 @@ class CampaignsFromDB extends Campaigns {
           )
         )
         WHERE rn <= 94
-      """.map(CampaignSentDates.fromRow).list().apply()
+      """.map(CampaignSentDate.fromRow).list().apply()
     }
   }
 }
