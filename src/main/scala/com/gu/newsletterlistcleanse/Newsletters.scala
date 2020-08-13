@@ -20,7 +20,7 @@ class Newsletters {
   def computeCutOffDates(campaignSentDates: List[CampaignSentDate]): List[NewsletterCutOff] = {
 
     def extractCutOffBasedOnCampaign(campaignName: String, sentDates: List[CampaignSentDate]): Option[NewsletterCutOff] = for {
-      unOpenCount <- Newsletters.newsletterToUnopenedCount.get(campaignName)
+      unOpenCount <- Newsletters.cleansingPolicy.get(campaignName)
       cutOff <- sentDates
         .sortBy(_.timestamp)(reverseChrono)
         .drop(unOpenCount)
@@ -36,7 +36,7 @@ class Newsletters {
 
 object Newsletters {
 
-  val newsletterToUnopenedCount: Map[String, Int] = Map(
+  val cleansingPolicy: Map[String, Int] = Map(
     "Editorial_GuardianTodayUK" -> 94,
     "Editorial_GuardianTodayUS" -> 94,
     "Editorial_GuardianTodayAUS" -> 94,
