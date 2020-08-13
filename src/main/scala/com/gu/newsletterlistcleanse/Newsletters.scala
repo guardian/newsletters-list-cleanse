@@ -82,9 +82,9 @@ object Newsletters {
     "Editorial_GuardianUniversities" -> 13,
     "Editorial_SocietyWeekly" -> 13,
     "Editorial_TeacherNetwork" -> 13,
-    // "Editorial_WeekendPapers" -> 94,  ???
-    // "Editorial_OFM" -> 94, ???
-    // "MK_FrontPage" -> 94, ???
+    // "Editorial_WeekendPapers" -> 94, => Marketing
+    // "Editorial_OFM" -> 94, => Marketing
+    // "MK_FrontPage" -> 94, => Marketing
   )
 
   val attributeToNewsletterMapping: Map[String, String] = Map(
