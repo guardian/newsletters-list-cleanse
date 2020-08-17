@@ -18,5 +18,5 @@ object CampaignSentDate {
   def fromRow(rs: WrappedResultSet): CampaignSentDate = CampaignSentDate(
     campaignId = rs.string("campaign_id"),
     campaignName = rs.string("campaign_name"),
-    timestamp = ZonedDateTime.from(formatter.parse(rs.string("timestamp"))))
+    timestamp = rs.zonedDateTime("timestamp"))
 }

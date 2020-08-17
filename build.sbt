@@ -28,7 +28,7 @@ libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % "1.7.30",
   "org.scalikejdbc" %% "scalikejdbc" % "3.5.0",
   "org.scalikejdbc" %% "scalikejdbc-config" % "3.5.0",
-  "com.zaneli" %% "scalikejdbc-athena" % "0.2.3",
+  "com.zaneli" %% "scalikejdbc-athena" % "0.2.4",
   "com.syncron.amazonaws" % "simba-athena-jdbc-driver" % "2.0.2",
   "org.scalatest" %% "scalatest" % "3.2.0" % "test"
 )
