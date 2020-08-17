@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.gu.identity.model.EmailNewsletters
 import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
 import org.slf4j.{Logger, LoggerFactory}
+import io.circe.syntax._
 
 import scala.beans.BeanProperty
 
@@ -31,7 +32,7 @@ object GetCleanseListLambda {
       .getOrElse(newsletters.allNewsletters)
     val campaignSentDates = campaigns.fetchCampaignSentDates(newslettersToProcess)
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
-    logger.info(s"result: ${cutOffDates}")
+    logger.info(s"result: ${cutOffDates.asJson}")
   }
 }
 

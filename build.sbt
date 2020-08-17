@@ -30,7 +30,10 @@ libraryDependencies ++= Seq(
   "org.scalikejdbc" %% "scalikejdbc-config" % "3.5.0",
   "com.zaneli" %% "scalikejdbc-athena" % "0.2.4",
   "com.syncron.amazonaws" % "simba-athena-jdbc-driver" % "2.0.2",
-  "org.scalatest" %% "scalatest" % "3.2.0" % "test"
+  "org.scalatest" %% "scalatest" % "3.2.0" % "test",
+  "io.circe" %% "circe-core" % "0.12.3",
+  "io.circe" %% "circe-generic" % "0.12.3",
+  "io.circe" %% "circe-parser"% "0.12.3"
 )
 assemblyJarName := s"${name.value}.jar"
 assemblyMergeStrategy in assembly := {
