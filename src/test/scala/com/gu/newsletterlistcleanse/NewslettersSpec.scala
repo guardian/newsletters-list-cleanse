@@ -66,7 +66,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
     result.head.cutOffDate should be(aDate.plusDays(999 - 94))
   }
 
-  it should "compute now matter how many campaigns are being send" in {
+  it should "compute no matter how many campaigns are being sent" in {
     val listOfSentDates1 = Range(0, 1000).toList.map { dateOffset =>
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
