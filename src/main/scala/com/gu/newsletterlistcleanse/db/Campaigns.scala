@@ -24,7 +24,7 @@ class CampaignsFromDB extends Campaigns {
             ORDER BY timestamp DESC
           )
         )
-        WHERE rn <= cutOffLength
+        WHERE rn <= $cutOffLength
       """.map(CampaignSentDate.fromRow).list().apply()
     }
   }
