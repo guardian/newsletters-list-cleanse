@@ -1,49 +1,40 @@
 package com.gu.newsletterlistcleanse
 
 import com.amazonaws.services.lambda.runtime.Context
-import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{QueueName, Payload}
-import org.slf4j.{Logger, LoggerFactory}
-import io.circe.syntax._
+import org.slf4j.{ Logger, LoggerFactory }
 
-import scala.beans.BeanProperty
-
-
-case class GetCleanseListLambdaInput(
-  @BeanProperty
-  newslettersToProcess: List[String]
-)
+/**
+ * This is compatible with aws' lambda JSON to POJO conversion.
+ * You can test your lambda by sending it the following payload:
+ * {"name": "Bob"}
+ */
+class GetCleanseListLambdaInput() {
+  var name: String = _
+  def getName(): String = name
+  def setName(theName: String): Unit = name = theName
+}
 
 object GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val campaigns: Campaigns = new CampaignsFromDB()
-  val newsletters: Newsletters = new Newsletters()
 
+  /*
+   * This is your lambda entry point
+   */
   def handler(lambdaInput: GetCleanseListLambdaInput, context: Context): Unit = {
-    process(lambdaInput)
-  }
-
-  def process(lambdaInput: GetCleanseListLambdaInput): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
-    
-    val newslettersToProcess = Option(lambdaInput.newslettersToProcess) // this is set by AWS, so potentially null
-      .getOrElse(newsletters.allNewsletters)
-    val campaignSentDates = campaigns.fetchCampaignSentDates(newslettersToProcess)
-    val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
-    val payload = Payload(cutOffDates.asJson.noSpaces)
-    logger.info(s"result: ${cutOffDates.asJson}")
-
-    val queueName = QueueName(s"newsletter-newsletter-cut-off-date-${env.stage}")
-    AwsSQSSend(queueName)(payload)
-
+    logger.info(process(lambdaInput.name, env))
   }
+
+  /*
+   * I recommend to put your logic outside of the handler
+   */
+  def process(name: String, env: Env): String = s"Hello $name! (from ${env.app} in ${env.stack})\n"
 }
 
-object TestGetCleanseList {
+object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
-    GetCleanseListLambda.process(GetCleanseListLambdaInput(List("Editorial_AnimalsFarmed")))
+    println(GetCleanseListLambda.process(args.headOption.getOrElse("Alex"), Env()))
   }
 }
