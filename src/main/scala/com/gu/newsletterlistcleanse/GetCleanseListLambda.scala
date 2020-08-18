@@ -33,7 +33,7 @@ object GetCleanseListLambda {
   def process(name: String, env: Env): String = s"Hello $name! (from ${env.app} in ${env.stack})\n"
 }
 
-object TestGetCutOffDates {
+object TestGetCleanseList {
   def main(args: Array[String]): Unit = {
     println(GetCleanseListLambda.process(args.headOption.getOrElse("Alex"), Env()))
   }
