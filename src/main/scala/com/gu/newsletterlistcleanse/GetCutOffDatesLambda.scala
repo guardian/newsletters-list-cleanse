@@ -31,7 +31,7 @@ object GetCutOffDatesLambda {
 
     val newslettersToProcess = Option(lambdaInput.newslettersToProcess) // this is set by AWS, so potentially null
       .getOrElse(newsletters.allNewsletters)
-    val campaignSentDates = campaigns.fetchCampaignSentDates(newslettersToProcess)
+    val campaignSentDates = campaigns.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
     val payload = Payload(cutOffDates.asJson.noSpaces)
     logger.info(s"result: ${cutOffDates.asJson}")

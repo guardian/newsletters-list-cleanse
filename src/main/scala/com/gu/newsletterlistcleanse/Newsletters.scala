@@ -87,6 +87,8 @@ object Newsletters {
     // "MK_FrontPage" -> 94, => Marketing
   )
 
+  val maxCutOffPeriod = cleansingPolicy.valuesIterator.max
+
   val attributeToNewsletterMapping: Map[String, String] = Map(
     "TodayUk_Subscribe_Email" -> "Editorial_GuardianTodayUK",
     "TodayUs_Subscribe_Email" -> "Editorial_GuardianTodayUS",

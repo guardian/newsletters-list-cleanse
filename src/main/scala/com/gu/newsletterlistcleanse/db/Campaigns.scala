@@ -4,15 +4,15 @@ import scalikejdbc._
 import scalikejdbc.athena._
 
 trait Campaigns {
-  def fetchCampaignSentDates(campaignNames: List[String]): List[CampaignSentDate]
+  def fetchCampaignSentDates(campaignNames: List[String], cutOffLength: Int): List[CampaignSentDate]
 }
 
 class CampaignsFromDB extends Campaigns {
-  override def fetchCampaignSentDates(campaignNames: List[String]): List[CampaignSentDate] = {
+  override def fetchCampaignSentDates(campaignNames: List[String], cutOffLength: Int): List[CampaignSentDate] = {
     DB.athena { implicit session =>
       sql"""
         SELECT campaign_name, campaign_id, timestamp FROM (
-          SELECT row_number() over(partition by campaign_name) AS rn, *
+          SELECT row_number() over(PARTITION BY campaign_name) AS rn, *
           FROM (
             SELECT
               campaign_name,
@@ -20,11 +20,11 @@ class CampaignsFromDB extends Campaigns {
               timestamp
             FROM
               "clean"."braze_dispatch"
-            where campaign_name in ($campaignNames)
-            order by timestamp desc
+            WHERE campaign_name IN ($campaignNames)
+            ORDER BY timestamp DESC
           )
         )
-        WHERE rn <= 94
+        WHERE rn <= cutOffLength
       """.map(CampaignSentDate.fromRow).list().apply()
     }
   }
