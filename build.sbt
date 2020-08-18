@@ -9,7 +9,7 @@ description:= "A monthly job to clean newsletter mailing lists of lapsed subscri
 
 version := "1.0"
 
-scalaVersion := "2.13.3"
+scalaVersion := "2.12.12"
 
 scalacOptions ++= Seq(
   "-deprecation",
@@ -21,10 +21,20 @@ scalacOptions ++= Seq(
 enablePlugins(RiffRaffArtifact)
 
 libraryDependencies ++= Seq(
+  "com.gu.identity" %% "identity-model" % "3.221",
   "com.amazonaws" % "aws-lambda-java-core" % "1.2.1",
   "com.amazonaws" % "aws-lambda-java-log4j2" % "1.2.0",
+  "com.amazonaws" % "aws-java-sdk-sqs" % "1.11.842",
   "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3",
-  "org.slf4j" % "slf4j-api" % "1.7.30"
+  "org.slf4j" % "slf4j-api" % "1.7.30",
+  "org.scalikejdbc" %% "scalikejdbc" % "3.5.0",
+  "org.scalikejdbc" %% "scalikejdbc-config" % "3.5.0",
+  "com.zaneli" %% "scalikejdbc-athena" % "0.2.4",
+  "com.syncron.amazonaws" % "simba-athena-jdbc-driver" % "2.0.2",
+  "org.scalatest" %% "scalatest" % "3.2.0" % "test",
+  "io.circe" %% "circe-core" % "0.12.3",
+  "io.circe" %% "circe-generic" % "0.12.3",
+  "io.circe" %% "circe-parser"% "0.12.3"
 )
 assemblyJarName := s"${name.value}.jar"
 assemblyMergeStrategy in assembly := {

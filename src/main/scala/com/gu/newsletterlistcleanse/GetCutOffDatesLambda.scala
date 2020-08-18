@@ -1,40 +1,49 @@
 package com.gu.newsletterlistcleanse
 
 import com.amazonaws.services.lambda.runtime.Context
-import org.slf4j.{ Logger, LoggerFactory }
+import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{QueueName, Payload}
+import org.slf4j.{Logger, LoggerFactory}
+import io.circe.syntax._
 
-/**
- * This is compatible with aws' lambda JSON to POJO conversion.
- * You can test your lambda by sending it the following payload:
- * {"name": "Bob"}
- */
-class GetCutOffDatesLambdaInput() {
-  var name: String = _
-  def getName(): String = name
-  def setName(theName: String): Unit = name = theName
-}
+import scala.beans.BeanProperty
+
+
+case class GetCutOffDatesLambdaInput(
+  @BeanProperty
+  newslettersToProcess: List[String]
+)
 
 object GetCutOffDatesLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  val campaigns: Campaigns = new CampaignsFromDB()
+  val newsletters: Newsletters = new Newsletters()
 
-  /*
-   * This is your lambda entry point
-   */
-  def handler(lambdaInput: GetCleanseListLambdaInput, context: Context): Unit = {
-    val env = Env()
-    logger.info(s"Starting $env")
-    logger.info(process(lambdaInput.name, env))
+  def handler(lambdaInput: GetCutOffDatesLambdaInput, context: Context): Unit = {
+    process(lambdaInput)
   }
 
-  /*
-   * I recommend to put your logic outside of the handler
-   */
-  def process(name: String, env: Env): String = s"Hello $name! (from ${env.app} in ${env.stack})\n"
+  def process(lambdaInput: GetCutOffDatesLambdaInput): Unit = {
+    val env = Env()
+    logger.info(s"Starting $env")
+
+    val newslettersToProcess = Option(lambdaInput.newslettersToProcess) // this is set by AWS, so potentially null
+      .getOrElse(newsletters.allNewsletters)
+    val campaignSentDates = campaigns.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
+    val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
+    val payload = Payload(cutOffDates.asJson.noSpaces)
+    logger.info(s"result: ${cutOffDates.asJson}")
+
+    val queueName = QueueName(s"newsletter-newsletter-cut-off-date-${env.stage}")
+    AwsSQSSend(queueName)(payload)
+
+  }
 }
 
 object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
-    println(GetCutOffDatesLambda.process(args.headOption.getOrElse("Alex"), Env()))
+    GetCutOffDatesLambda.process(GetCutOffDatesLambdaInput(List("Editorial_AnimalsFarmed")))
   }
 }
