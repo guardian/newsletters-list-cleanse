@@ -24,6 +24,7 @@ libraryDependencies ++= Seq(
   "com.gu.identity" %% "identity-model" % "3.221",
   "com.amazonaws" % "aws-lambda-java-core" % "1.2.1",
   "com.amazonaws" % "aws-lambda-java-log4j2" % "1.2.0",
+  "com.amazonaws" % "aws-java-sdk-sqs" % "1.11.842",
   "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3",
   "org.slf4j" % "slf4j-api" % "1.7.30",
   "org.scalikejdbc" %% "scalikejdbc" % "3.5.0",
