@@ -3,7 +3,7 @@ package com.gu.newsletterlistcleanse
 import com.amazonaws.services.lambda.runtime.Context
 import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{QueueName, Payload}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{QueueName, SinglePayload}
 import org.slf4j.{Logger, LoggerFactory}
 import io.circe.syntax._
 
@@ -33,8 +33,8 @@ object GetCutOffDatesLambda {
       .getOrElse(newsletters.allNewsletters)
     val campaignSentDates = campaigns.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
-    val payload = Payload(cutOffDates.asJson.noSpaces)
-    logger.info(s"result: ${cutOffDates.asJson}")
+    val payload = SinglePayload(cutOffDates.asJson.noSpaces)
+    logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
 
     val queueName = QueueName(s"newsletter-newsletter-cut-off-date-${env.stage}")
     AwsSQSSend(queueName)(payload)
@@ -44,6 +44,6 @@ object GetCutOffDatesLambda {
 
 object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
-    GetCutOffDatesLambda.process(GetCutOffDatesLambdaInput(List("Editorial_AnimalsFarmed")))
+    GetCutOffDatesLambda.process(GetCutOffDatesLambdaInput(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead")))
   }
 }

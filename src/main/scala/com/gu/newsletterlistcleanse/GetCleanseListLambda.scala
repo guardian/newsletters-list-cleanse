@@ -1,40 +1,88 @@
 package com.gu.newsletterlistcleanse
 
 import com.amazonaws.services.lambda.runtime.Context
-import org.slf4j.{ Logger, LoggerFactory }
+import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
+import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{BatchPayload, QueueName, SinglePayload}
+import io.circe.parser._
+import io.circe.syntax._
 
-/**
- * This is compatible with aws' lambda JSON to POJO conversion.
- * You can test your lambda by sending it the following payload:
- * {"name": "Bob"}
- */
-class GetCleanseListLambdaInput() {
-  var name: String = _
-  def getName(): String = name
-  def setName(theName: String): Unit = name = theName
-}
+import scala.collection.JavaConverters._
+import scala.beans.BeanProperty
+import org.slf4j.{Logger, LoggerFactory}
+
+
+case class GetCleanseListLambdaInput(
+  @BeanProperty
+  cutOffDates: SQSEvent)
 
 object GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  val campaigns: Campaigns = new CampaignsFromDB()
 
-  /*
-   * This is your lambda entry point
-   */
+
   def handler(lambdaInput: GetCleanseListLambdaInput, context: Context): Unit = {
-    val env = Env()
-    logger.info(s"Starting $env")
-    logger.info(process(lambdaInput.name, env))
+    val cutOffDates = parseSqsMessage(lambdaInput)
+    process(cutOffDates)
   }
 
-  /*
-   * I recommend to put your logic outside of the handler
-   */
-  def process(name: String, env: Env): String = s"Hello $name! (from ${env.app} in ${env.stack})\n"
+  def parseSqsMessage(lambdaInput: GetCleanseListLambdaInput): List[NewsletterCutOff] =
+    (for (message <- lambdaInput.cutOffDates.getRecords().asScala;
+      cutOff <- decode[List[NewsletterCutOff]](message.getBody()).toOption)
+      yield {
+          cutOff
+      }).toList.flatten
+
+
+  def process(campaignCutOffDates: List[NewsletterCutOff]): Unit = {
+    val env = Env()
+    logger.info(s"Starting $env")
+    val queueName = QueueName(s"newsletter-cleanse-list-CODE")
+
+//    val batchedPayload = BatchPayload((
+//      for (
+//        campaignCutOff <- campaignCutOffDates;
+//        cleanseList = CleanseList(
+//          campaignCutOff.newsletterName,
+//          campaigns.fetchCampaignCleanseList(campaignCutOff).map(userID => userID.userId
+//          )
+//        );
+//        batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(20);
+//        (index, batch) <- batchedCleanseList)
+//      yield (index, batch.asJson.noSpaces)
+//      ).toMap)
+
+
+      for (
+        campaignCutOff <- campaignCutOffDates;
+        cleanseList = CleanseList(
+          campaignCutOff.newsletterName,
+          campaigns.fetchCampaignCleanseList(campaignCutOff).map(userID => userID.userId
+          )
+        );
+        batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(4000);
+        (index, batch) <- batchedCleanseList){
+        logger.info(s"Sending batch $index to $queueName")
+        AwsSQSSend[SinglePayload](queueName)(SinglePayload(batch.asJson.noSpaces))
+      }
+
+
+//    val queueName = QueueName(s"newsletter-cleanse-list-CODE")
+//    AwsSQSSend[BatchPayload](queueName)(batchedPayload)
+
+
+
+
+
+  }
 }
 
 object TestGetCleanseList {
   def main(args: Array[String]): Unit = {
-    println(GetCleanseListLambda.process(args.headOption.getOrElse("Alex"), Env()))
+    val JsonString = "[{\"newsletterName\":\"Editorial_AnimalsFarmed\",\"cutOffDate\":\"2020-01-21T11:31:14Z[Europe/London]\"},{\"newsletterName\":\"Editorial_TheLongRead\",\"cutOffDate\":\"2020-05-16T09:00:26+01:00[Europe/London]\"}]"
+    GetCleanseListLambda.process(decode[List[NewsletterCutOff]](JsonString).toOption.map(cutOff => cutOff).toList.flatten)
   }
 }
