@@ -4,7 +4,10 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.amazonaws.services.sqs.{AmazonSQS, AmazonSQSClientBuilder}
 import com.gu.newsletterlistcleanse.NewsletterSQSAWSCredentialProvider
+import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import org.slf4j.{Logger, LoggerFactory}
+import io.circe.syntax._
+
 
 object AwsSQSSend {
   case class QueueName(value: String) extends AnyVal
@@ -25,10 +28,19 @@ object AwsSQSSend {
     (sqsClient, queueUrl)
   }
 
-  def sendMessage(queueName: QueueName, payload: Payload): SendMessageResult = {
+  private def sendMessage(queueName: QueueName, payload: Payload): SendMessageResult = {
     val (sqsClient: AmazonSQS, queueUrl: String) = buildSqsClient(queueName)
 
     sqsClient.sendMessage(queueUrl, payload.value)
+  }
+
+
+  def sendCleanseList(queueName: QueueName, cleanseList: CleanseList): SendMessageResult = {
+    sendMessage(queueName, Payload(cleanseList.asJson.noSpaces))
+  }
+
+  def sendCutOffDates(queueName: QueueName, cutOffDates: List[NewsletterCutOff]): SendMessageResult = {
+    sendMessage(queueName, Payload(cutOffDates.asJson.noSpaces))
   }
 
 }

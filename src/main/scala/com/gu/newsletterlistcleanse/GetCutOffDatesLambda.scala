@@ -28,17 +28,13 @@ object GetCutOffDatesLambda {
   def process(lambdaInput: GetCutOffDatesLambdaInput): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
-
     val newslettersToProcess = Option(lambdaInput.newslettersToProcess) // this is set by AWS, so potentially null
       .getOrElse(newsletters.allNewsletters)
     val campaignSentDates = campaigns.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
-    val payload = Payload(cutOffDates.asJson.noSpaces)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
-
     val queueName = QueueName(s"newsletter-newsletter-cut-off-date-${env.stage}")
-    AwsSQSSend.sendMessage(queueName, payload)
-
+    AwsSQSSend.sendCutOffDates(queueName, cutOffDates)
   }
 }
 

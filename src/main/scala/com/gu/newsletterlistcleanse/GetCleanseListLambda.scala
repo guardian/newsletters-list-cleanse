@@ -5,9 +5,8 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{QueueName, Payload}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.QueueName
 import io.circe.parser._
-import io.circe.syntax._
 
 import scala.collection.JavaConverters._
 import scala.beans.BeanProperty
@@ -29,33 +28,41 @@ object GetCleanseListLambda {
     process(cutOffDates)
   }
 
-  def parseSqsMessage(lambdaInput: GetCleanseListLambdaInput): List[NewsletterCutOff] =
-    (for (message <- lambdaInput.cutOffDates.getRecords().asScala;
-      cutOff <- decode[List[NewsletterCutOff]](message.getBody()).toOption)
-      yield {
-          cutOff
-      }).toList.flatten
+  def decodeSQSMessageFromJson(message: SQSEvent.SQSMessage): List[NewsletterCutOff] = {
+    decode[List[NewsletterCutOff]](message.getBody()).fold(
+      { err =>
+        logger.error(err.getMessage)
+        Nil
+      },
+      identity
+    )
 
-  def cleanseListToJsonString(cleanseList: CleanseList): String = cleanseList.asJson.noSpaces
+  }
 
+  def parseSqsMessage(lambdaInput: GetCleanseListLambdaInput): List[NewsletterCutOff] = {
+    for {
+      message <- lambdaInput.cutOffDates.getRecords().asScala.toList
+      cutOff <- decodeSQSMessageFromJson(message)
+    } yield cutOff
+  }
 
   def process(campaignCutOffDates: List[NewsletterCutOff]): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
     val queueName = QueueName(s"newsletter-cleanse-list-CODE")
 
-    for (
-      campaignCutOff <- campaignCutOffDates;
+    for {
+      campaignCutOff <- campaignCutOffDates
+      userIds = campaigns.fetchCampaignCleanseList(campaignCutOff).map(_.userId)
       cleanseList = CleanseList(
         campaignCutOff.newsletterName,
-        campaigns.fetchCampaignCleanseList(campaignCutOff).map(userID => userID.userId
-        )
-      );
-      batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(5000);
+        userIds
+      )
+      batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(5000)
       (batch, index) <- batchedCleanseList.zipWithIndex
-    ){
+    }{
       logger.info(s"Sending batch $index of ${batch.newsletterName} to $queueName")
-      AwsSQSSend.sendMessage(queueName, Payload(cleanseListToJsonString(batch)))
+      AwsSQSSend.sendCleanseList(queueName, batch)
     }
   }
 }
