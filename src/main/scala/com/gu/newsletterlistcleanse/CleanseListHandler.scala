@@ -3,10 +3,11 @@ package com.gu.newsletterlistcleanse
 import com.gu.newsletterlistcleanse.models.CleanseList
 
 case class CleanseListHandler(cleanseList: CleanseList){
-  def getCleanseListBatches(maxBatchSize: Int): Map[String, CleanseList] = {
-    cleanseList.userIdList.grouped(maxBatchSize).toList
+  def getCleanseListBatches(usersPerMessage: Int, messagesPerBatch: Int): List[Map[String, CleanseList]] = {
+    val listOfCleanseLists = cleanseList.userIdList.grouped(usersPerMessage).toList
       .map(chunk => CleanseList(cleanseList.newsletterName, chunk ))
-      .zipWithIndex
-      .map({case (element, index) => ((index+1).toString, element)}).toMap
+
+    listOfCleanseLists.zipWithIndex.map({case (element, index) => ((index+1).toString, element)})
+      .grouped(messagesPerBatch).toList.map(_.toMap)
   }
 }

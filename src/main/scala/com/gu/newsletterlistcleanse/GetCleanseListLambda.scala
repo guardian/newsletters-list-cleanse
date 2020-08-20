@@ -24,7 +24,7 @@ object GetCleanseListLambda {
   val campaigns: Campaigns = new CampaignsFromDB()
 
 
-  def handler(lambdaInput: GetCleanseListLambdaInput, context: Context): Unit = {
+  def handler(lambdaInput: GetCleanseListLambdaInput): Unit = {
     val cutOffDates = parseSqsMessage(lambdaInput)
     process(cutOffDates)
   }
@@ -42,7 +42,24 @@ object GetCleanseListLambda {
     logger.info(s"Starting $env")
     val queueName = QueueName(s"newsletter-cleanse-list-CODE")
 
-//    val batchedPayload = BatchPayload((
+    for (
+      campaignCutOff <- campaignCutOffDates;
+      cleanseList = CleanseList(
+        campaignCutOff.newsletterName,
+        campaigns.fetchCampaignCleanseList(campaignCutOff).map(userID => userID.userId
+        )
+      );
+      batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(5000, 1);
+      batchGroup <- batchedCleanseList;
+      (index, batch) <- batchGroup
+    ){
+      logger.info(s"Sending batch $index to $queueName")
+      AwsSQSSend.sendSingle(queueName, SinglePayload(batch.asJson.noSpaces))
+    }
+
+//    val maxBatchSize = 500
+//    logger.info(s"Creating batched Payload of maxBatchSize $maxBatchSize")
+//    val batchedPayload = BatchPayload(
 //      for (
 //        campaignCutOff <- campaignCutOffDates;
 //        cleanseList = CleanseList(
@@ -50,33 +67,13 @@ object GetCleanseListLambda {
 //          campaigns.fetchCampaignCleanseList(campaignCutOff).map(userID => userID.userId
 //          )
 //        );
-//        batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(20);
-//        (index, batch) <- batchedCleanseList)
-//      yield (index, batch.asJson.noSpaces)
-//      ).toMap)
-
-
-      for (
-        campaignCutOff <- campaignCutOffDates;
-        cleanseList = CleanseList(
-          campaignCutOff.newsletterName,
-          campaigns.fetchCampaignCleanseList(campaignCutOff).map(userID => userID.userId
-          )
-        );
-        batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(4000);
-        (index, batch) <- batchedCleanseList){
-        logger.info(s"Sending batch $index to $queueName")
-        AwsSQSSend[SinglePayload](queueName)(SinglePayload(batch.asJson.noSpaces))
-      }
-
-
-//    val queueName = QueueName(s"newsletter-cleanse-list-CODE")
-//    AwsSQSSend[BatchPayload](queueName)(batchedPayload)
-
-
-
-
-
+//        batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(maxBatchSize, 10);
+//        batchGroup <- batchedCleanseList)
+//        yield {
+//          batchGroup.map{ case (index, batch) => (index, batch.asJson.noSpaces)}
+//        })
+//    val batchResult = AwsSQSSend.sendBatch(queueName, batchedPayload)
+//    logger.info(s"Sent ${batchResult.length} messages")
   }
 }
 

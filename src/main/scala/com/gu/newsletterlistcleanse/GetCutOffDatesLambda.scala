@@ -37,7 +37,7 @@ object GetCutOffDatesLambda {
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
 
     val queueName = QueueName(s"newsletter-newsletter-cut-off-date-${env.stage}")
-    AwsSQSSend(queueName)(payload)
+    AwsSQSSend.sendSingle(queueName, payload)
 
   }
 }

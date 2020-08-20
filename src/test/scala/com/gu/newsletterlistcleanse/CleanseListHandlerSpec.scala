@@ -12,19 +12,19 @@ class CleanseListHandlerSpec extends AnyFlatSpec with Matchers {
     val cleanseList: CleanseList = CleanseList("TestNewsletter", Nil)
 
     val cleanseListHandler: CleanseListHandler = CleanseListHandler(cleanseList)
-    cleanseListHandler.getCleanseListBatches(100) should be(Map())
+    cleanseListHandler.getCleanseListBatches(100, 2) should be(List())
   }
 
-  it should "return equal lists of maxBatchSize with any spare left over" in {
+  it should "return a List of Maps with `messagesPerBatch` fields per Map and cleanseLists with Lists of length `usersPerMessage`" in {
     val cleanseList: CleanseList = CleanseList("TestNewsletter", shortList)
 
     val cleanseListHandler: CleanseListHandler = CleanseListHandler(cleanseList)
 
-    cleanseListHandler.getCleanseListBatches(2) should be(
-      Map(
+    cleanseListHandler.getCleanseListBatches(2, 2) should be(
+      List(Map(
         "1" -> CleanseList("TestNewsletter", List("a", "b")),
-        "2" -> CleanseList("TestNewsletter", List("c", "d")),
-        "3" -> CleanseList("TestNewsletter", List("e"))
+        "2" -> CleanseList("TestNewsletter", List("c", "d"))),
+        Map("3" -> CleanseList("TestNewsletter", List("e")))
       )
     )
 
@@ -35,13 +35,11 @@ class CleanseListHandlerSpec extends AnyFlatSpec with Matchers {
 
     val cleanseListHandler: CleanseListHandler = CleanseListHandler(cleanseList)
 
-    cleanseListHandler.getCleanseListBatches(100) should be(
-      Map(
+    cleanseListHandler.getCleanseListBatches(100, 10) should be(
+      List(Map(
         "1" -> CleanseList("TestNewsletter", List("a", "b", "c", "d", "e"))
-      )
+      ))
     )
 
   }
-
-
 }
