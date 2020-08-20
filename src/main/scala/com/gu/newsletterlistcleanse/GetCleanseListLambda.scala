@@ -5,7 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{BatchPayload, QueueName, SinglePayload}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{QueueName, Payload}
 import io.circe.parser._
 import io.circe.syntax._
 
@@ -36,6 +36,8 @@ object GetCleanseListLambda {
           cutOff
       }).toList.flatten
 
+  def cleanseListToJsonString(cleanseList: CleanseList): String = cleanseList.asJson.noSpaces
+
 
   def process(campaignCutOffDates: List[NewsletterCutOff]): Unit = {
     val env = Env()
@@ -49,31 +51,12 @@ object GetCleanseListLambda {
         campaigns.fetchCampaignCleanseList(campaignCutOff).map(userID => userID.userId
         )
       );
-      batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(5000, 1);
-      batchGroup <- batchedCleanseList;
-      (index, batch) <- batchGroup
+      batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(5000);
+      (batch, index) <- batchedCleanseList.zipWithIndex
     ){
-      logger.info(s"Sending batch $index to $queueName")
-      AwsSQSSend.sendSingle(queueName, SinglePayload(batch.asJson.noSpaces))
+      logger.info(s"Sending batch $index of ${batch.newsletterName} to $queueName")
+      AwsSQSSend.sendMessage(queueName, Payload(cleanseListToJsonString(batch)))
     }
-
-//    val maxBatchSize = 500
-//    logger.info(s"Creating batched Payload of maxBatchSize $maxBatchSize")
-//    val batchedPayload = BatchPayload(
-//      for (
-//        campaignCutOff <- campaignCutOffDates;
-//        cleanseList = CleanseList(
-//          campaignCutOff.newsletterName,
-//          campaigns.fetchCampaignCleanseList(campaignCutOff).map(userID => userID.userId
-//          )
-//        );
-//        batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(maxBatchSize, 10);
-//        batchGroup <- batchedCleanseList)
-//        yield {
-//          batchGroup.map{ case (index, batch) => (index, batch.asJson.noSpaces)}
-//        })
-//    val batchResult = AwsSQSSend.sendBatch(queueName, batchedPayload)
-//    logger.info(s"Sent ${batchResult.length} messages")
   }
 }
 

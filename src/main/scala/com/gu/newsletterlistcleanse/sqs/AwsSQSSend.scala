@@ -1,24 +1,15 @@
 package com.gu.newsletterlistcleanse.sqs
 
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.sqs.model.{SendMessageBatchRequestEntry, SendMessageBatchResult, SendMessageResult}
+import com.amazonaws.services.sqs.model.SendMessageResult
 import com.amazonaws.services.sqs.{AmazonSQS, AmazonSQSClientBuilder}
 import com.gu.newsletterlistcleanse.NewsletterSQSAWSCredentialProvider
 import org.slf4j.{Logger, LoggerFactory}
 
-import collection.JavaConverters._
-
-
-
-
 object AwsSQSSend {
   case class QueueName(value: String) extends AnyVal
 
-  sealed trait Payload
-
-  case class SinglePayload(value: String) extends Payload
-
-  case class BatchPayload(value: List[Map[String,String]]) extends Payload
+  case class Payload(value: String) extends AnyVal
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -34,23 +25,10 @@ object AwsSQSSend {
     (sqsClient, queueUrl)
   }
 
-  def sendSingle(queueName: QueueName, payload: SinglePayload): SendMessageResult = {
+  def sendMessage(queueName: QueueName, payload: Payload): SendMessageResult = {
     val (sqsClient: AmazonSQS, queueUrl: String) = buildSqsClient(queueName)
 
     sqsClient.sendMessage(queueUrl, payload.value)
-  }
-
-  def sendBatch(queueName: QueueName, batchPayload: BatchPayload): List[SendMessageBatchResult] = {
-    val (sqsClient: AmazonSQS, queueUrl: String) = buildSqsClient(queueName)
-    for (
-      batch <- batchPayload.value
-    ) yield {
-      val batchRequest: java.util.List[SendMessageBatchRequestEntry] = batch.map({ case (id, payload) =>
-        new SendMessageBatchRequestEntry(id, payload)
-      }
-      ).toList.asJava
-      sqsClient.sendMessageBatch(queueUrl, batchRequest)
-    }
   }
 
 }
