@@ -1,9 +1,11 @@
 package com.gu.newsletterlistcleanse
 
 import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
+import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{QueueName, Payload}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
 import org.slf4j.{Logger, LoggerFactory}
 import io.circe.syntax._
 
@@ -25,6 +27,10 @@ object GetCutOffDatesLambda {
     process(lambdaInput)
   }
 
+  def sendCutOffDates(queueName: QueueName, cutOffDates: List[NewsletterCutOff]): SendMessageResult = {
+    AwsSQSSend.sendMessage(queueName, Payload(cutOffDates.asJson.noSpaces))
+  }
+
   def process(lambdaInput: GetCutOffDatesLambdaInput): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
@@ -34,7 +40,7 @@ object GetCutOffDatesLambda {
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
     val queueName = QueueName(s"newsletter-newsletter-cut-off-date-${env.stage}")
-    AwsSQSSend.sendCutOffDates(queueName, cutOffDates)
+    sendCutOffDates(queueName, cutOffDates)
   }
 }
 

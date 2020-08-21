@@ -2,11 +2,15 @@ package com.gu.newsletterlistcleanse
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.QueueName
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
+import com.gu.newsletterlistcleanse.EitherConverter.EitherList
+import io.circe
 import io.circe.parser._
+import io.circe.syntax._
 
 import scala.collection.JavaConverters._
 import scala.beans.BeanProperty
@@ -23,30 +27,30 @@ object GetCleanseListLambda {
   val campaigns: Campaigns = new CampaignsFromDB()
 
 
-  def handler(lambdaInput: GetCleanseListLambdaInput): Unit = {
-    val cutOffDates = parseSqsMessage(lambdaInput)
-    process(cutOffDates)
+  def handler(lambdaInput: GetCleanseListLambdaInput) = {
+    parseSqsMessage(lambdaInput) match {
+      case Right(cleanseLists) =>
+        cleanseLists.foreach(process)
+      case Left(parseError) =>
+        logger.error(parseError.getMessage)
+    }
   }
 
-  def decodeSQSMessageFromJson(message: SQSEvent.SQSMessage): List[NewsletterCutOff] = {
-    decode[List[NewsletterCutOff]](message.getBody()).fold(
-      { err =>
-        logger.error(err.getMessage)
-        Nil
-      },
-      identity
-    )
 
-  }
-
-  def parseSqsMessage(lambdaInput: GetCleanseListLambdaInput): List[NewsletterCutOff] = {
-    for {
+  def parseSqsMessage(lambdaInput: GetCleanseListLambdaInput): Either[circe.Error, List[List[NewsletterCutOff]]] = {
+    (for {
+      // We only get a single message here despite it being a list
       message <- lambdaInput.cutOffDates.getRecords().asScala.toList
-      cutOff <- decodeSQSMessageFromJson(message)
-    } yield cutOff
+    } yield {
+      decode[List[NewsletterCutOff]](message.getBody())
+    }).toEitherList
   }
 
-  def process(campaignCutOffDates: List[NewsletterCutOff]): Unit = {
+  def sendCleanseList(queueName: QueueName, cleanseList: CleanseList): SendMessageResult = {
+    AwsSQSSend.sendMessage(queueName, Payload(cleanseList.asJson.noSpaces))
+  }
+
+  def process(campaignCutOffDates: List[NewsletterCutOff]): Unit  = {
     val env = Env()
     logger.info(s"Starting $env")
     val queueName = QueueName(s"newsletter-cleanse-list-CODE")
@@ -58,11 +62,11 @@ object GetCleanseListLambda {
         campaignCutOff.newsletterName,
         userIds
       )
-      batchedCleanseList = CleanseListHandler(cleanseList).getCleanseListBatches(5000)
+      batchedCleanseList = cleanseList.getCleanseListBatches(5000)
       (batch, index) <- batchedCleanseList.zipWithIndex
-    }{
-      logger.info(s"Sending batch $index of ${batch.newsletterName} to $queueName")
-      AwsSQSSend.sendCleanseList(queueName, batch)
+    } {
+      logger.info(s"Sending batch $index of ${batch.newsletterName} to ${queueName.value}")
+      sendCleanseList(queueName, batch) // Do we want to return the SendMessageResult?
     }
   }
 }
