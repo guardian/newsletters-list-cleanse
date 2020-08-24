@@ -38,7 +38,6 @@ object GetCleanseListLambda {
 
   def parseSqsMessage(sqsEvent: SQSEvent): Either[circe.Error, List[NewsletterCutOff]] = {
     (for {
-      // We only get a single message here despite it being a list
       message <- sqsEvent.getRecords.asScala.toList
     } yield {
       decode[NewsletterCutOff](message.getBody)
