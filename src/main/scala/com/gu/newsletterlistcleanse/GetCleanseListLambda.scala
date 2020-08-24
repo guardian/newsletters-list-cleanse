@@ -1,6 +1,7 @@
 package com.gu.newsletterlistcleanse
 
-import com.amazonaws.services.lambda.runtime.Context
+import java.util.concurrent.TimeUnit
+
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
@@ -12,45 +13,48 @@ import io.circe
 import io.circe.parser._
 import io.circe.syntax._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConverters._
-import scala.beans.BeanProperty
 import org.slf4j.{Logger, LoggerFactory}
+
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
 object GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
   val campaigns: Campaigns = new CampaignsFromDB()
 
+  val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
-  def handler(sqsEvent: SQSEvent) = {
+  def handler(sqsEvent: SQSEvent): Unit = {
     parseSqsMessage(sqsEvent) match {
       case Right(cleanseLists) =>
-        cleanseLists.foreach(process)
+        Await.result(process(cleanseLists), timeout)
       case Left(parseError) =>
         logger.error(parseError.getMessage)
     }
   }
 
-
-  def parseSqsMessage(sqsEvent: SQSEvent): Either[circe.Error, List[List[NewsletterCutOff]]] = {
+  def parseSqsMessage(sqsEvent: SQSEvent): Either[circe.Error, List[NewsletterCutOff]] = {
     (for {
       // We only get a single message here despite it being a list
-      message <- sqsEvent.getRecords().asScala.toList
+      message <- sqsEvent.getRecords.asScala.toList
     } yield {
-      decode[List[NewsletterCutOff]](message.getBody())
+      decode[NewsletterCutOff](message.getBody)
     }).toEitherList
   }
 
-  def sendCleanseList(queueName: QueueName, cleanseList: CleanseList): SendMessageResult = {
+  def sendCleanseList(queueName: QueueName, cleanseList: CleanseList): Future[SendMessageResult] = {
     AwsSQSSend.sendMessage(queueName, Payload(cleanseList.asJson.noSpaces))
   }
 
-  def process(campaignCutOffDates: List[NewsletterCutOff]): Unit  = {
+  def process(campaignCutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]]  = {
     val env = Env()
     logger.info(s"Starting $env")
-    val queueName = QueueName(s"newsletter-cleanse-list-CODE")
+    val queueName = QueueName(s"newsletter-cleanse-list-${env.stage}")
 
-    for {
+    val results = for {
       campaignCutOff <- campaignCutOffDates
       userIds = campaigns.fetchCampaignCleanseList(campaignCutOff).map(_.userId)
       cleanseList = CleanseList(
@@ -59,16 +63,19 @@ object GetCleanseListLambda {
       )
       batchedCleanseList = cleanseList.getCleanseListBatches(5000)
       (batch, index) <- batchedCleanseList.zipWithIndex
-    } {
+    } yield {
       logger.info(s"Sending batch $index of ${batch.newsletterName} to ${queueName.value}")
-      sendCleanseList(queueName, batch) // Do we want to return the SendMessageResult?
+      sendCleanseList(queueName, batch)
     }
+
+    Future.sequence(results)
   }
 }
 
 object TestGetCleanseList {
   def main(args: Array[String]): Unit = {
-    val JsonString = "[{\"newsletterName\":\"Editorial_AnimalsFarmed\",\"cutOffDate\":\"2020-01-21T11:31:14Z[Europe/London]\"},{\"newsletterName\":\"Editorial_TheLongRead\",\"cutOffDate\":\"2020-05-16T09:00:26+01:00[Europe/London]\"}]"
-    GetCleanseListLambda.process(decode[List[NewsletterCutOff]](JsonString).toOption.map(cutOff => cutOff).toList.flatten)
+    val json = """{"newsletterName":"Editorial_AnimalsFarmed","cutOffDate":"2020-01-21T11:31:14Z[Europe/London]"}"""
+    val parsedJson = decode[NewsletterCutOff](json).right.get
+    Await.result(GetCleanseListLambda.process(List(parsedJson)), GetCleanseListLambda.timeout)
   }
 }

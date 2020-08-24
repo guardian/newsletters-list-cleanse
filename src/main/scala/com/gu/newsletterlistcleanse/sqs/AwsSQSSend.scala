@@ -1,11 +1,12 @@
 package com.gu.newsletterlistcleanse.sqs
 
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.sqs.model.SendMessageResult
-import com.amazonaws.services.sqs.{AmazonSQS, AmazonSQSClientBuilder}
+import com.amazonaws.services.sqs.model.{SendMessageRequest, SendMessageResult}
+import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClientBuilder}
 import com.gu.newsletterlistcleanse.NewsletterSQSAWSCredentialProvider
 import org.slf4j.{Logger, LoggerFactory}
 
+import scala.concurrent.Future
 
 object AwsSQSSend {
   case class QueueName(value: String) extends AnyVal
@@ -14,9 +15,9 @@ object AwsSQSSend {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  private def buildSqsClient(queueName: QueueName): (AmazonSQS, String) = {
+  private def buildSqsClient(queueName: QueueName): (AmazonSQSAsync, String) = {
 
-    val sqsClient = AmazonSQSClientBuilder
+    val sqsClient = AmazonSQSAsyncClientBuilder
       .standard()
       .withCredentials(new NewsletterSQSAWSCredentialProvider())
       .withRegion(Regions.EU_WEST_1)
@@ -26,9 +27,11 @@ object AwsSQSSend {
     (sqsClient, queueUrl)
   }
 
-  def sendMessage(queueName: QueueName, payload: Payload): SendMessageResult = {
-    val (sqsClient: AmazonSQS, queueUrl: String) = buildSqsClient(queueName)
+  def sendMessage(queueName: QueueName, payload: Payload): Future[SendMessageResult] = {
+    val (sqsClient: AmazonSQSAsync, queueUrl: String) = buildSqsClient(queueName)
 
-    sqsClient.sendMessage(queueUrl, payload.value)
+    val request: SendMessageRequest = new SendMessageRequest(queueUrl, payload.value)
+
+    AwsAsync(sqsClient.sendMessageAsync, request)
   }
 }
