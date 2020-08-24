@@ -11,4 +11,27 @@ The job is split into three lambdas that are joined together using SQS.
 This is done on a per-newsletter basis.
 * **updateBrazeUsers**: Update Braze using the cleanse list.
 
+## Test locally
+
+### GetCutOffDatesLambda
+
+```sbtshell
+eval System.setProperty("Stage", "CODE")
+runMain com.gu.newsletterlistcleanse.TestGetCutOffDates
+```
+
+### GetCleanseListLambda
+
+```sbtshell
+eval System.setProperty("Stage", "CODE")
+runMain com.gu.newsletterlistcleanse.TestGetCleanseList
+```
+
+### UpdateBrazeUsersLambda
+
+```sbtshell
+eval System.setProperty("Stage", "CODE")
+runMain com.gu.newsletterlistcleanse.UpdateBrazeUsersLambda
+```
+
 
