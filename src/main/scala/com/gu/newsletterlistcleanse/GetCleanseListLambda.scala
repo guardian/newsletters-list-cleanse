@@ -16,19 +16,14 @@ import scala.collection.JavaConverters._
 import scala.beans.BeanProperty
 import org.slf4j.{Logger, LoggerFactory}
 
-
-case class GetCleanseListLambdaInput(
-  @BeanProperty
-  cutOffDates: SQSEvent)
-
 object GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
   val campaigns: Campaigns = new CampaignsFromDB()
 
 
-  def handler(lambdaInput: GetCleanseListLambdaInput) = {
-    parseSqsMessage(lambdaInput) match {
+  def handler(sqsEvent: SQSEvent) = {
+    parseSqsMessage(sqsEvent) match {
       case Right(cleanseLists) =>
         cleanseLists.foreach(process)
       case Left(parseError) =>
@@ -37,10 +32,10 @@ object GetCleanseListLambda {
   }
 
 
-  def parseSqsMessage(lambdaInput: GetCleanseListLambdaInput): Either[circe.Error, List[List[NewsletterCutOff]]] = {
+  def parseSqsMessage(sqsEvent: SQSEvent): Either[circe.Error, List[List[NewsletterCutOff]]] = {
     (for {
       // We only get a single message here despite it being a list
-      message <- lambdaInput.cutOffDates.getRecords().asScala.toList
+      message <- sqsEvent.getRecords().asScala.toList
     } yield {
       decode[List[NewsletterCutOff]](message.getBody())
     }).toEitherList
