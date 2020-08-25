@@ -1,19 +1,12 @@
 package com.gu.newsletterlistcleanse.db
 
-import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import scalikejdbc._
 import scalikejdbc.athena._
 
-trait Campaigns {
-  def fetchCampaignSentDates(campaignNames: List[String], cutOffLength: Int): List[CampaignSentDate]
-
-  def fetchCampaignCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID]
-}
-
-class CampaignsFromDB extends Campaigns {
+class AthenaOperations extends DatabaseOperations {
   override def fetchCampaignSentDates(campaignNames: List[String], cutOffLength: Int): List[CampaignSentDate] = {
     DB.athena { implicit session =>
       sql"""

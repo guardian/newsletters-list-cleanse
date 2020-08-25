@@ -1,10 +1,11 @@
 package com.gu.newsletterlistcleanse
 
+import java.io.FileInputStream
 import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.sqs.model.SendMessageResult
-import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
+import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
@@ -21,10 +22,10 @@ case class GetCutOffDatesLambdaInput(
   newslettersToProcess: List[String]
 )
 
-object GetCutOffDatesLambda {
+class GetCutOffDatesLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val campaigns: Campaigns = new CampaignsFromDB()
+  val campaigns: DatabaseOperations = new BigQueryOperations(new FileInputStream("abc.json")) // TODO load this from SSM / local for dev
   val newsletters: Newsletters = new Newsletters()
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
@@ -57,7 +58,8 @@ object GetCutOffDatesLambda {
 
 object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
+    val getCutOffDatesLambda = new GetCutOffDatesLambda()
     val lambdaInput = GetCutOffDatesLambdaInput(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead"))
-    Await.result(GetCutOffDatesLambda.process(lambdaInput), GetCutOffDatesLambda.timeout)
+    Await.result(getCutOffDatesLambda.process(lambdaInput), getCutOffDatesLambda.timeout)
   }
 }

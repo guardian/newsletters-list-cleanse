@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.sqs.model.SendMessageResult
-import com.gu.newsletterlistcleanse.db.{Campaigns, CampaignsFromDB}
+import com.gu.newsletterlistcleanse.db.{AthenaOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
@@ -23,7 +23,7 @@ import scala.concurrent.{Await, Future}
 object GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val campaigns: Campaigns = new CampaignsFromDB()
+  val campaigns: DatabaseOperations = new AthenaOperations()
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
