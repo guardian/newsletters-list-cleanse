@@ -1,32 +1,19 @@
 package com.gu.newsletterlistcleanse.sqs
 
 import com.amazonaws.regions.Regions
-import com.amazonaws.services.sqs.model.SendMessageRequest
+import com.amazonaws.services.sqs.model.{SendMessageRequest, SendMessageResult}
 import com.amazonaws.services.sqs.{AmazonSQSAsync, AmazonSQSAsyncClientBuilder}
 import com.gu.newsletterlistcleanse.NewsletterSQSAWSCredentialProvider
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
-
 
 object AwsSQSSend {
-  val logger: Logger = LoggerFactory.getLogger(this.getClass)
+  case class QueueName(value: String) extends AnyVal
 
-  def apply(queueName: QueueName)(payload: Payload):Future[Unit] = {
-    val (sqsClient: AmazonSQSAsync, queueUrl: String) = buildSqsClient(queueName)
-    logger.info(s"Sending message to SQS queue $queueUrl")
-    val messageResult = AwsAsync(sqsClient.sendMessageAsync, new SendMessageRequest(queueUrl, payload.value))
-    messageResult.transform {
-      case Success(result) =>
-        logger.info(s"Successfully sent message to $queueUrl: $result")
-        Success(())
-      case Failure(throwable) =>
-        logger.error(s"Failed to send message to $queueUrl due to:", throwable)
-        Failure(throwable)
-    }
-  }
+  case class Payload(value: String) extends AnyVal
+
+  val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   private def buildSqsClient(queueName: QueueName): (AmazonSQSAsync, String) = {
 
@@ -40,23 +27,11 @@ object AwsSQSSend {
     (sqsClient, queueUrl)
   }
 
-    def sendSync(queueName: QueueName)(payload: Payload): Try[Unit] = {
-      val (sqsClient: AmazonSQSAsync, queueUrl: String) = buildSqsClient(queueName)
+  def sendMessage(queueName: QueueName, payload: Payload): Future[SendMessageResult] = {
+    val (sqsClient: AmazonSQSAsync, queueUrl: String) = buildSqsClient(queueName)
 
-      logger.info(s"Sending message to SQS queue $queueUrl")
+    val request: SendMessageRequest = new SendMessageRequest(queueUrl, payload.value)
 
-      Try(sqsClient.sendMessage(new SendMessageRequest(queueUrl, payload.value))) match {
-        case Success(result) =>
-          logger.info(s"Successfully sent message to $queueUrl: $result")
-          Success(())
-        case Failure(throwable) =>
-          logger.error(s"Failed to send message due to $queueUrl due to:", throwable)
-          Failure(throwable)
-      }
-
-    }
-
-  case class QueueName(value: String) extends AnyVal
-
-  case class Payload(value: String) extends AnyVal
+    AwsAsync(sqsClient.sendMessageAsync, request)
+  }
 }
