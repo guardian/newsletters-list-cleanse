@@ -1,7 +1,7 @@
 package com.gu.newsletterlistcleanse
 
-import com.simba.athena.amazonaws.auth.{ AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain }
-import com.simba.athena.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.auth.{AWSCredentialsProviderChain, DefaultAWSCredentialsProviderChain}
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
 
 class NewsletterAWSCredentialProvider extends AWSCredentialsProviderChain(
   new ProfileCredentialsProvider("ophan"),
