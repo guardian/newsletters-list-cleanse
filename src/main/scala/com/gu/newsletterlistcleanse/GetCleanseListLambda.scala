@@ -1,10 +1,11 @@
 package com.gu.newsletterlistcleanse
 
+import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.sqs.model.SendMessageResult
-import com.gu.newsletterlistcleanse.db.{AthenaOperations, DatabaseOperations}
+import com.gu.newsletterlistcleanse.db.{AthenaOperations, BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
@@ -23,7 +24,8 @@ import scala.concurrent.{Await, Future}
 object GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val databaseOperations: DatabaseOperations = new AthenaOperations()
+  val serviceAccountCredentials: InputStream = this.getClass.getClassLoader().getResource("service-account.json").openStream()
+  val databaseOperations: DatabaseOperations = new BigQueryOperations(serviceAccountCredentials)
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
@@ -61,6 +63,7 @@ object GetCleanseListLambda {
         campaignCutOff.newsletterName,
         userIds
       )
+      _ = logger.info(s"Found ${userIds.length} users to remove from ${campaignCutOff.newsletterName}")
       batchedCleanseList = cleanseList.getCleanseListBatches(5000)
       (batch, index) <- batchedCleanseList.zipWithIndex
     } yield {

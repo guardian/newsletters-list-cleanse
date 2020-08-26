@@ -29,6 +29,8 @@ class BigQueryOperations(googleCredentials: InputStream) extends DatabaseOperati
     ZonedDateTime.ofInstant(Instant.ofEpochMilli(epochMicro / 1000), ZoneId.of("UTC"))
   }
 
+  private def toBigQueryTimestamp(zonedDateTime: ZonedDateTime): Long = zonedDateTime.toInstant.toEpochMilli * 1000
+
   override def fetchCampaignSentDates(campaignNames: List[String], cutOffLength: Int): List[CampaignSentDate] = {
 
     val sql = """SELECT campaign_name, campaign_id, timestamp FROM (
@@ -39,7 +41,7 @@ class BigQueryOperations(googleCredentials: InputStream) extends DatabaseOperati
                 |      campaign_id,
                 |      timestamp
                 |    FROM
-                |      `clean.braze_dispatch`
+                |      `datalake.braze_dispatch`
                 |    WHERE campaign_name IN UNNEST(@campaignNames)
                 |    ORDER BY timestamp DESC
                 |  )
@@ -63,5 +65,42 @@ class BigQueryOperations(googleCredentials: InputStream) extends DatabaseOperati
     }
   }
 
-  override def fetchCampaignCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID] = ???
+  override def fetchCampaignCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID] = {
+
+    val sql = """SELECT DISTINCT users.external_id.id AS user_id
+                |FROM
+                |  `datalake.braze_email_send` as send,
+                |  `datalake.braze_users` as users
+                |WHERE
+                |NOT exists (
+                |  SELECT 1
+                |  FROM `datalake.braze_email_open` AS open
+                |  WHERE
+                |    send.user_id = open.user_id
+                |    AND open.campaign_name = send.campaign_name
+                |    AND open.event_date >= DATE(@formattedDate)
+                |) AND exists (
+                |  SELECT 1
+                |  FROM `datalake.braze_newsletter_membership` AS membership
+                |  WHERE
+                |  send.identity_id = membership.identity_id
+                |  AND send.campaign_name = membership.newsletter_name
+                |  AND membership.customer_status = 'active'
+                |)
+                |AND send.campaign_name = @campaignName
+                |AND send.identity_id = users.identity_id
+                |AND send.event_date >= DATE(@formattedDate)""".stripMargin
+
+    val queryConfig = QueryJobConfiguration.newBuilder(sql)
+      .addNamedParameter("campaignName", QueryParameterValue.string(newsletterCutOff.newsletterName))
+      .addNamedParameter("formattedDate", QueryParameterValue.timestamp(toBigQueryTimestamp(newsletterCutOff.cutOffDate)))
+      .setUseLegacySql(false)
+      .build()
+
+    val results = bigQuery.query(queryConfig)
+
+    results.iterateAll().asScala.toList.map { result =>
+      UserID(result.get("user_id").getStringValue)
+    }
+  }
 }
