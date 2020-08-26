@@ -24,7 +24,7 @@ case class GetCutOffDatesLambdaInput(
 class GetCutOffDatesLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val campaigns: DatabaseOperations = new AthenaOperations()
+  val databaseOperations: DatabaseOperations = new AthenaOperations()
   val newsletters: Newsletters = new Newsletters()
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
@@ -47,7 +47,7 @@ class GetCutOffDatesLambda {
     logger.info(s"Starting $env")
     val newslettersToProcess = Option(lambdaInput.newslettersToProcess) // this is set by AWS, so potentially null
       .getOrElse(newsletters.allNewsletters)
-    val campaignSentDates = campaigns.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
+    val campaignSentDates = databaseOperations.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
     val queueName = QueueName(s"newsletter-newsletter-cut-off-date-${env.stage}")

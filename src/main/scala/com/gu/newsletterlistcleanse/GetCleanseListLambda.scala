@@ -23,7 +23,7 @@ import scala.concurrent.{Await, Future}
 object GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val campaigns: DatabaseOperations = new AthenaOperations()
+  val databaseOperations: DatabaseOperations = new AthenaOperations()
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
@@ -56,7 +56,7 @@ object GetCleanseListLambda {
 
     val results = for {
       campaignCutOff <- campaignCutOffDates
-      userIds = campaigns.fetchCampaignCleanseList(campaignCutOff).map(_.userId)
+      userIds = databaseOperations.fetchCampaignCleanseList(campaignCutOff).map(_.userId)
       cleanseList = CleanseList(
         campaignCutOff.newsletterName,
         userIds
