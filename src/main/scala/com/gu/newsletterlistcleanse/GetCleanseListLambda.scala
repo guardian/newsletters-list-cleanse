@@ -31,12 +31,12 @@ object GetCleanseListLambda {
     parseSqsMessage(sqsEvent) match {
       case Right(cleanseLists) =>
         Await.result(process(cleanseLists), timeout)
-      case Left(parseError) =>
-        logger.error(parseError.getMessage)
+      case Left(parseErrors) =>
+        parseErrors.foreach(e => logger.error(e.getMessage))
     }
   }
 
-  def parseSqsMessage(sqsEvent: SQSEvent): Either[circe.Error, List[NewsletterCutOff]] = {
+  def parseSqsMessage(sqsEvent: SQSEvent): Either[List[circe.Error], List[NewsletterCutOff]] = {
     (for {
       message <- sqsEvent.getRecords.asScala.toList
     } yield {
