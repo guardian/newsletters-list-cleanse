@@ -28,15 +28,16 @@ object GetCleanseListLambda {
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
   def handler(sqsEvent: SQSEvent): Unit = {
-    parseSqsMessage(sqsEvent) match {
-      case Right(cleanseLists) =>
-        Await.result(process(cleanseLists), timeout)
+    parseCutoffsSqsMessage(sqsEvent) match {
+      case Right(newsletterCutOffs) =>
+        Await.result(process(newsletterCutOffs), timeout)
       case Left(parseErrors) =>
-        parseErrors.foreach(e => logger.error(e.getMessage))
+        parseErrors.forEach(e =>logger.error(e.getMessage))
     }
   }
 
-  def parseSqsMessage(sqsEvent: SQSEvent): Either[List[circe.Error], List[NewsletterCutOff]] = {
+  // TODO: Convert this to a generic function for use here and in UpdateBrazeUsers
+  def parseCutoffsSqsMessage(sqsEvent: SQSEvent): Either[circe.Error, List[NewsletterCutOff]] = {
     (for {
       message <- sqsEvent.getRecords.asScala.toList
     } yield {

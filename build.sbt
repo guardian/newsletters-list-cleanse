@@ -35,7 +35,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.0" % "test",
   "io.circe" %% "circe-core" % "0.12.3",
   "io.circe" %% "circe-generic" % "0.12.3",
-  "io.circe" %% "circe-parser"% "0.12.3"
+  "io.circe" %% "circe-parser"% "0.12.3",
+  "org.scalaj" %% "scalaj-http" % "2.4.2"
 )
 assemblyJarName := s"${name.value}.jar"
 assemblyMergeStrategy in assembly := {
