@@ -38,18 +38,18 @@ object BrazeClient {
     }
   }
 
-  def updateUser(apiKey: String, request: UserTrackRequest): Unit = { //Either[BrazeError, BrazeResponse] = {
+  def updateUser(apiKey: String, request: UserTrackRequest): Either[BrazeError, BrazeResponse] = {
     val jsonRequest = request.asJson.toString
-    logger.info(jsonRequest)
-//    withClientLogging(s"updating user: ${request.attributes.toString()}, ${request.events.toString()}"){
-//      val response = Http(s"$brazeEndpoint/users/track")
-//        .timeout(connTimeoutMs = timeout, readTimeoutMs = timeout)
-//        .header("Content-type", "application/json")
-//        .header("Authorization", s"Bearer $apiKey")
-//        .postData(jsonRequest)
-//        .asString
-//
-//      parseValidateResponse(response)
-//    }
+    // TODO: Make logging more useful whilst maintaining data security
+    withClientLogging(s"updating user subscriptions"){
+      val response = Http(s"$brazeEndpoint/users/track")
+        .timeout(connTimeoutMs = timeout, readTimeoutMs = timeout)
+        .header("Content-type", "application/json")
+        .header("Authorization", s"Bearer $apiKey")
+        .postData(jsonRequest)
+        .asString
+
+      parseValidateResponse(response)
+    }
   }
 }
