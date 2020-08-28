@@ -45,7 +45,7 @@ object UpdateBrazeUsersLambda {
     }).toEitherList
   }
 
-  def process(cleanseLists: List[CleanseList]): Either[List[BrazeError], List[BrazeResponse]] = {
+  def process(cleanseLists: List[CleanseList]): Unit = { //Either[List[BrazeError], List[BrazeResponse]] = {
 
     val brazeResponses = for {
       cleanseList <- cleanseLists
@@ -64,14 +64,14 @@ object UpdateBrazeUsersLambda {
       BrazeClient.updateUser(apiKey, request)
     }
 
-    brazeResponses.toEitherList
+//    brazeResponses.toEitherList
 
   }
 }
 
 object TestUpdateBrazeUsers {
   def main(args: Array[String]): Unit = {
-//    cleanseLists= List(CleanseList())
-//    println(UpdateBrazeUsersLambda.process())
+    val cleanseLists= List(CleanseList("Editorial_AnimalsFarmed", List("user_1", "user_2")))
+    println(UpdateBrazeUsersLambda.process(cleanseLists))
   }
 }

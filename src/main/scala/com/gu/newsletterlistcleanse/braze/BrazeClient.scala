@@ -38,16 +38,18 @@ object BrazeClient {
     }
   }
 
-  def updateUser(apiKey: String, request: UserTrackRequest): Either[BrazeError, BrazeResponse] = {
-    withClientLogging(s"updating user: ${request.attributes.toString()}, ${request.events.toString()}"){
-      val response = Http(s"$brazeEndpoint/users/track")
-        .timeout(connTimeoutMs = timeout, readTimeoutMs = timeout)
-        .header("Content-type", "application/json")
-        .header("Authorization", s"Bearer $apiKey")
-        .postData(request.asJson.noSpaces)
-        .asString
-
-      parseValidateResponse(response)
-    }
+  def updateUser(apiKey: String, request: UserTrackRequest): Unit = { //Either[BrazeError, BrazeResponse] = {
+    val jsonRequest = request.asJson.toString
+    logger.info(jsonRequest)
+//    withClientLogging(s"updating user: ${request.attributes.toString()}, ${request.events.toString()}"){
+//      val response = Http(s"$brazeEndpoint/users/track")
+//        .timeout(connTimeoutMs = timeout, readTimeoutMs = timeout)
+//        .header("Content-type", "application/json")
+//        .header("Authorization", s"Bearer $apiKey")
+//        .postData(jsonRequest)
+//        .asString
+//
+//      parseValidateResponse(response)
+//    }
   }
 }

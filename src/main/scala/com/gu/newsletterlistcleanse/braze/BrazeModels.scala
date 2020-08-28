@@ -2,10 +2,11 @@ package com.gu.newsletterlistcleanse.braze
 
 import java.time.Instant
 
-import com.gu.identity.model.{EmailNewsletter}
+import com.gu.identity.model.{EmailNewsletter, EmailNewsletters}
 import scalaj.http.HttpResponse
 import io.circe.{Decoder, Encoder, Json}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
+import io.circe.syntax.EncoderOps
 
 case class BrazeResponse(message: String) {
   def isSuccessful: Boolean = message == "success" || message == "queued"
@@ -24,6 +25,24 @@ object BrazeError {
 case class BrazeNewsletterSubscriptionsUpdate(externalId: String,
                                               newsletterSubscriptions: Map[EmailNewsletter, Boolean])
 
+object BrazeNewsletterSubscriptionsUpdate {
+  implicit val subscriptionUpdateEncoder: Encoder[BrazeNewsletterSubscriptionsUpdate] =
+    new Encoder[BrazeNewsletterSubscriptionsUpdate] {
+      override def apply(update: BrazeNewsletterSubscriptionsUpdate): Json = {
+        val jsonSubs = update.newsletterSubscriptions.map {
+          case (newsLetter: EmailNewsletter, isSubscribed) if newsLetter == EmailNewsletters.guardianTodayUk =>
+            Map(
+              newsLetter.brazeSubscribeAttributeName -> Json.fromBoolean(isSubscribed),
+              "email_subscribe_today_uk" -> Json.fromBoolean(isSubscribed)
+            )
+          case (newsLetter, isSubscribed) =>
+            Map(newsLetter.brazeSubscribeAttributeName -> Json.fromBoolean(isSubscribed))
+        }
+        jsonSubs.fold(Map.empty)(_ ++ _).asJson
+      }
+  }
+}
+
 case class BrazeEventProperties(campaign_name: String)
 
 case class BrazeEvent(external_id: String,
@@ -31,6 +50,17 @@ case class BrazeEvent(external_id: String,
                       time: String,
                       properties: BrazeEventProperties,
                       updateExistingOnlyField: Boolean = false)
+
+object BrazeEvent {
+  implicit val brazeEventEncoder: Encoder[BrazeEvent] = new Encoder[BrazeEvent] {
+    override def apply(event: BrazeEvent): Json = Json.obj(
+        "external_id" -> Json.fromString(event.external_id),
+        "name" -> Json.fromString(event.name),
+        "properties" -> Map("campaign_name" -> event.properties.campaign_name).asJson,
+        "time" -> Json.fromString(event.time),
+    )
+  }
+}
 
 object BrazeSubscribeEvent {
 
@@ -59,7 +89,11 @@ object UserTrackRequest {
     UserTrackRequest(Seq(userUpdate), events.toSeq)
   }
 
-  implicit val userTrackRequestEncoder: Encoder[UserTrackRequest] = deriveEncoder
-  implicit val userTrackRequestDecoder: Decoder[UserTrackRequest] = deriveDecoder
+  implicit val userTrackRequestEncoder: Encoder[UserTrackRequest] = new Encoder[UserTrackRequest] {
+    override def apply(utr: UserTrackRequest): Json = Json.obj(
+      ("attributes", utr.attributes.asJson),
+      ("events", utr.events.asJson)
+    )
+  }
 
 }
