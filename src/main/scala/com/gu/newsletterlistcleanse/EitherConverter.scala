@@ -1,20 +1,15 @@
 package com.gu.newsletterlistcleanse
 
-import scala.annotation.tailrec
-
 object EitherConverter {
-    implicit class EitherList[E, A](le: List[Either[E, A]]){
-      def toEitherList: Either[E, List[A]] = {
-        @tailrec
-        def helper(list: List[Either[E, A]], acc: List[A]):
-        Either[E, List[A]] = list match {
-          case Nil => Right(acc)
-          case x::xs => x match {
-            case Left(e) => Left(e)
-            case Right(v) => helper(xs, acc :+ v)
-          }
-        }
-        helper(le, Nil)
+  implicit class EitherList[E, A](le: List[Either[E, A]]){
+    def toEitherList: Either[List[E], List[A]] = {
+      le.foldRight[Either[List[E], List[A]]](Right(Nil)) {
+        case (Left(e), Left(es)) => Left(e :: es)
+        case (Left(e), Right(_)) => Left(List(e))
+        case (Right(_), Left(es)) => Left(es)
+        case (Right(a), Right(as)) => Right(a :: as)
       }
     }
+
+  }
 }
