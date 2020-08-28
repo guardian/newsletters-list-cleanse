@@ -30,6 +30,7 @@ object BrazeNewsletterSubscriptionsUpdate {
     new Encoder[BrazeNewsletterSubscriptionsUpdate] {
       override def apply(update: BrazeNewsletterSubscriptionsUpdate): Json = {
         val jsonSubs = update.newsletterSubscriptions.map {
+          // This case only relevant whilst migrating email_subscribe_today_uk custom attribute
           case (newsLetter: EmailNewsletter, isSubscribed) if newsLetter == EmailNewsletters.guardianTodayUk =>
             Map(
               newsLetter.brazeSubscribeAttributeName -> Json.fromBoolean(isSubscribed),
@@ -37,8 +38,8 @@ object BrazeNewsletterSubscriptionsUpdate {
             )
           case (newsLetter, isSubscribed) =>
             Map(newsLetter.brazeSubscribeAttributeName -> Json.fromBoolean(isSubscribed))
-        }
-        jsonSubs.fold(Map.empty)(_ ++ _).asJson
+        }.fold(Map.empty)(_ ++ _)
+        (jsonSubs ++ Map("external_id" -> Json.fromString(update.externalId))).asJson
       }
   }
 }
