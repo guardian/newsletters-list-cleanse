@@ -2,7 +2,7 @@ package com.gu.newsletterlistcleanse
 
 import java.time.ZonedDateTime
 
-import com.gu.identity.model.EmailNewsletters
+import com.gu.identity.model.{EmailNewsletter, EmailNewsletters}
 import com.gu.newsletterlistcleanse.db.CampaignSentDate
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 
@@ -141,4 +141,8 @@ object Newsletters {
   )
 
   val newsletterToAttribute: Map[String, String] = attributeToNewsletterMapping.map(_.swap)
+
+  def getIdentityNewsletterFromName(newsletterName: String): Option[EmailNewsletter] =
+    Option(Newsletters.newsletterToAttribute(newsletterName)).flatMap(
+      name => EmailNewsletters.frombrazeSubscribeAttributeName(name))
 }

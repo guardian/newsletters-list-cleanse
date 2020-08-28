@@ -5,7 +5,7 @@ import scalaj.http._
 import io.circe.parser.decode
 import io.circe.syntax._
 
-class BrazeClient {
+object BrazeClient {
 
   private val timeout = 5000
 
@@ -38,11 +38,12 @@ class BrazeClient {
     }
   }
 
-  def updateUser(request: UserTrackRequest): Either[BrazeError, BrazeResponse] = {
+  def updateUser(apiKey: String, request: UserTrackRequest): Either[BrazeError, BrazeResponse] = {
     withClientLogging(s"updating user: ${request.attributes.toString()}, ${request.events.toString()}"){
       val response = Http(s"$brazeEndpoint/users/track")
         .timeout(connTimeoutMs = timeout, readTimeoutMs = timeout)
         .header("Content-type", "application/json")
+        .header("Authorization", s"Bearer $apiKey")
         .postData(request.asJson.noSpaces)
         .asString
 

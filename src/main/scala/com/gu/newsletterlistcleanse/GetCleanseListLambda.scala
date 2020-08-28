@@ -32,12 +32,12 @@ object GetCleanseListLambda {
       case Right(newsletterCutOffs) =>
         Await.result(process(newsletterCutOffs), timeout)
       case Left(parseErrors) =>
-        parseErrors.forEach(e =>logger.error(e.getMessage))
+        parseErrors.foreach(e =>logger.error(e.getMessage))
     }
   }
 
   // TODO: Convert this to a generic function for use here and in UpdateBrazeUsers
-  def parseCutoffsSqsMessage(sqsEvent: SQSEvent): Either[circe.Error, List[NewsletterCutOff]] = {
+  def parseCutoffsSqsMessage(sqsEvent: SQSEvent): Either[List[circe.Error], List[NewsletterCutOff]] = {
     (for {
       message <- sqsEvent.getRecords.asScala.toList
     } yield {

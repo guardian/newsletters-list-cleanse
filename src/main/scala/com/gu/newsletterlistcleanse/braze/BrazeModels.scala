@@ -2,10 +2,10 @@ package com.gu.newsletterlistcleanse.braze
 
 import java.time.Instant
 
-import com.gu.identity.model.IdentityNewsletter
+import com.gu.identity.model.{EmailNewsletter}
 import scalaj.http.HttpResponse
-import io.circe.{Encoder, Decoder}
-import io.circe.generic.semiauto.{deriveEncoder, deriveDecoder}
+import io.circe.{Decoder, Encoder, Json}
+import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 
 case class BrazeResponse(message: String) {
   def isSuccessful: Boolean = message == "success" || message == "queued"
@@ -22,7 +22,7 @@ object BrazeError {
 }
 
 case class BrazeNewsletterSubscriptionsUpdate(externalId: String,
-                                              newsletterSubscriptions: Map[IdentityNewsletter, Boolean])
+                                              newsletterSubscriptions: Map[EmailNewsletter, Boolean])
 
 case class BrazeEventProperties(campaign_name: String)
 
@@ -34,13 +34,13 @@ case class BrazeEvent(external_id: String,
 
 object BrazeSubscribeEvent {
 
-  def apply(externalId: String, sub: IdentityNewsletter, isSubscribed: Boolean, timestamp: Instant, updateExistingOnlyField: Boolean = false): List[BrazeEvent] = {
+  def apply(externalId: String, sub: EmailNewsletter, isSubscribed: Boolean, timestamp: Instant, updateExistingOnlyField: Boolean = false): List[BrazeEvent] = {
     // Marketing need to be able to segment subscription events by campaign. To do this the campaign name must be in the name of the event,
     // (as braze can only segment by custom event name not property).
     val newsletterEventName = if (isSubscribed) s"${sub.brazeSubscribeEventNamePrefix}_subscribe_email_date" else s"${sub.brazeSubscribeEventNamePrefix}_unsubscribe_email_date"
 
     val generalEventName = if (isSubscribed) "EditorialSubscribe" else "EditorialUnsubscribe"
-
+    // TODO: Do we need to handle subscription? Or just unsubscribe?
     List(
       BrazeEvent(externalId, generalEventName, timestamp.toString, BrazeEventProperties(sub.brazeSubscribeAttributeName), updateExistingOnlyField),
       BrazeEvent(externalId, newsletterEventName, timestamp.toString, BrazeEventProperties(sub.brazeSubscribeAttributeName), updateExistingOnlyField)
@@ -49,14 +49,14 @@ object BrazeSubscribeEvent {
   }
 }
 
-case class UserTrackRequest(api_key: String, attributes: Seq[BrazeNewsletterSubscriptionsUpdate], events: Seq[BrazeEvent])
+case class UserTrackRequest(attributes: Seq[BrazeNewsletterSubscriptionsUpdate], events: Seq[BrazeEvent])
 
 object UserTrackRequest {
-  def apply(api_key: String, userUpdate: BrazeNewsletterSubscriptionsUpdate, timestamp: Instant): UserTrackRequest = {
+  def apply(userUpdate: BrazeNewsletterSubscriptionsUpdate, timestamp: Instant): UserTrackRequest = {
     val events = userUpdate.newsletterSubscriptions.flatMap { case (subscription, isSubscribed) =>
       BrazeSubscribeEvent(userUpdate.externalId, subscription, isSubscribed, timestamp)
     }
-    UserTrackRequest(api_key, Seq(userUpdate), events.toSeq)
+    UserTrackRequest(Seq(userUpdate), events.toSeq)
   }
 
   implicit val userTrackRequestEncoder: Encoder[UserTrackRequest] = deriveEncoder
