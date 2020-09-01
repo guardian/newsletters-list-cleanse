@@ -211,6 +211,7 @@ Resources:
     Properties:
       Description: Event sent to process the previous day of data
       ScheduleExpression: cron(14 3 * * ? *)
+      State: DISABLED
       Targets:
         - Id: Lambda
           Arn: !GetAtt GetCutOffDatesLambda.Arn
