@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.sqs.model.SendMessageResult
-import com.gu.newsletterlistcleanse.db.{AthenaOperations, BigQueryOperations, DatabaseOperations}
+import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
