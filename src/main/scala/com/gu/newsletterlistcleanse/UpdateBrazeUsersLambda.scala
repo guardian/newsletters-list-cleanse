@@ -56,7 +56,7 @@ object UpdateBrazeUsersLambda {
     } yield {
 
       val apiKey: String = Option(System.getenv("BRAZE_API_KEY")).getOrElse("")
-      val timestamp: Instant = ZonedDateTime.now(ZoneId.of("UTC")).toInstant
+      val timestamp: Instant = Instant.now()
       val subscriptionsUpdate = BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
 
       val request: UserTrackRequest = UserTrackRequest.apply(subscriptionsUpdate, timestamp)
