@@ -20,7 +20,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-object GetCleanseListLambda {
+class GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
   val config: NewsletterConfig = NewsletterConfig.load()
@@ -78,6 +78,7 @@ object TestGetCleanseList {
   def main(args: Array[String]): Unit = {
     val json = """{"newsletterName":"Editorial_AnimalsFarmed","cutOffDate":"2020-01-21T11:31:14Z[Europe/London]"}"""
     val parsedJson = decode[NewsletterCutOff](json).right.get
-    Await.result(GetCleanseListLambda.process(List(parsedJson)), GetCleanseListLambda.timeout)
+    val getCleanseListLambda = new GetCleanseListLambda
+    Await.result(getCleanseListLambda.process(List(parsedJson)), getCleanseListLambda.timeout)
   }
 }

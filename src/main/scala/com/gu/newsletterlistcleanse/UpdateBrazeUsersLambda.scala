@@ -1,7 +1,6 @@
 package com.gu.newsletterlistcleanse
 
-import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZoneId, ZonedDateTime}
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
@@ -15,11 +14,10 @@ import org.slf4j.{Logger, LoggerFactory}
 
 
 import scala.collection.JavaConverters._
-import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 
-object UpdateBrazeUsersLambda {
+class UpdateBrazeUsersLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
@@ -73,7 +71,8 @@ object UpdateBrazeUsersLambda {
 
 object TestUpdateBrazeUsers {
   def main(args: Array[String]): Unit = {
-    val cleanseLists= List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb")))
-    println(UpdateBrazeUsersLambda.process(cleanseLists))
+    val cleanseLists = List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb")))
+    val updateBrazeUsersLambda = new UpdateBrazeUsersLambda()
+    println(updateBrazeUsersLambda.process(cleanseLists))
   }
 }
