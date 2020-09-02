@@ -32,6 +32,7 @@ libraryDependencies ++= Seq(
   "org.scalikejdbc" %% "scalikejdbc-config" % "3.5.0",
   "com.zaneli" %% "scalikejdbc-athena" % "0.2.4",
   "com.syncron.amazonaws" % "simba-athena-jdbc-driver" % "2.0.2",
+  "com.google.cloud" % "google-cloud-bigquery" % "1.116.10",
   "org.scalatest" %% "scalatest" % "3.2.0" % "test",
   "io.circe" %% "circe-core" % "0.12.3",
   "io.circe" %% "circe-generic" % "0.12.3",
