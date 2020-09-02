@@ -1,6 +1,5 @@
 package com.gu.newsletterlistcleanse
 
-import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
@@ -24,8 +23,8 @@ import scala.concurrent.{Await, Future}
 object GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val serviceAccountCredentials: InputStream = this.getClass.getClassLoader().getResource("service-account.json").openStream()
-  val databaseOperations: DatabaseOperations = new BigQueryOperations(serviceAccountCredentials)
+  val config: NewsletterConfig = NewsletterConfig.load()
+  val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount)
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 

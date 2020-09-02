@@ -20,7 +20,10 @@ scalacOptions ++= Seq(
 
 enablePlugins(RiffRaffArtifact)
 
+resolvers += "Guardian Platform Bintray" at "https://dl.bintray.com/guardian/platforms"
+
 libraryDependencies ++= Seq(
+  "com.gu" %% "simple-configuration-ssm" % "1.5.2",
   "com.gu.identity" %% "identity-model" % "3.221",
   "com.amazonaws" % "aws-lambda-java-core" % "1.2.1",
   "com.amazonaws" % "aws-lambda-java-events" % "2.2.9",

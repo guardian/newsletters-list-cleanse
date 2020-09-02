@@ -23,6 +23,8 @@ object UpdateBrazeUsersLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
+  val config: NewsletterConfig = NewsletterConfig.load()
+
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
   def handler(sqsEvent: SQSEvent): Unit = {
@@ -55,7 +57,7 @@ object UpdateBrazeUsersLambda {
       identityNewsletter <- getIdentityNewsletterFromName(newsletterName)
     } yield {
 
-      val apiKey: String = Option(System.getenv("BRAZE_API_KEY")).getOrElse("")
+      val apiKey: String = config.brazeApiToken
       val timestamp: Instant = Instant.now()
       val subscriptionsUpdate = BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
 

@@ -16,7 +16,6 @@ import scala.beans.BeanProperty
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.io.Source
 
 case class GetCutOffDatesLambdaInput(
   @BeanProperty
@@ -26,8 +25,8 @@ case class GetCutOffDatesLambdaInput(
 class GetCutOffDatesLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val serviceAccountCredentials: InputStream = this.getClass.getClassLoader().getResource("service-account.json").openStream()
-  val databaseOperations: DatabaseOperations = new BigQueryOperations(serviceAccountCredentials)
+  val config: NewsletterConfig = NewsletterConfig.load()
+  val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount)
   val newsletters: Newsletters = new Newsletters()
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
