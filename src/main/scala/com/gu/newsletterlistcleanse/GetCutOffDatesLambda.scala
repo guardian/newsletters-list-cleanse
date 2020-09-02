@@ -3,6 +3,7 @@ package com.gu.newsletterlistcleanse
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
@@ -25,7 +26,9 @@ case class GetCutOffDatesLambdaInput(
 class GetCutOffDatesLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val config: NewsletterConfig = NewsletterConfig.load()
+  val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
+  val sqsClient = AwsSQSSend.buildSqsClient(credentialProvider)
+  val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
   val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount)
   val newsletters: Newsletters = new Newsletters()
 
@@ -35,10 +38,10 @@ class GetCutOffDatesLambda {
     Await.result(process(lambdaInput), timeout)
   }
 
-  def sendCutOffDates(queueName: QueueName, cutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]] = {
+  def sendCutOffDates(cutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]] = {
     val results = cutOffDates.map { cutoffDate =>
       logger.info(s"Sending cut-off date: $cutoffDate")
-      AwsSQSSend.sendMessage(queueName, Payload(cutoffDate.asJson.noSpaces))
+      AwsSQSSend.sendMessage(sqsClient, config.cutOffSqsUrl, Payload(cutoffDate.asJson.noSpaces))
     }
 
     Future.sequence(results)
@@ -52,8 +55,7 @@ class GetCutOffDatesLambda {
     val campaignSentDates = databaseOperations.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
-    val queueName = QueueName(s"newsletter-newsletter-cut-off-date-${env.stage}")
-    sendCutOffDates(queueName, cutOffDates)
+    sendCutOffDates(cutOffDates)
   }
 }
 

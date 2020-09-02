@@ -3,6 +3,7 @@ package com.gu.newsletterlistcleanse
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.gu.newsletterlistcleanse.EitherConverter.EitherList
 import com.gu.newsletterlistcleanse.Newsletters.getIdentityNewsletterFromName
@@ -12,7 +13,6 @@ import io.circe
 import io.circe.parser.decode
 import org.slf4j.{Logger, LoggerFactory}
 
-
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
 
@@ -21,7 +21,8 @@ class UpdateBrazeUsersLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  val config: NewsletterConfig = NewsletterConfig.load()
+  val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
+  val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
