@@ -65,13 +65,12 @@ object BrazeEvent {
 
 object BrazeSubscribeEvent {
 
-  def apply(externalId: String, sub: EmailNewsletter, isSubscribed: Boolean, timestamp: Instant, updateExistingOnlyField: Boolean = false): List[BrazeEvent] = {
+  def apply(externalId: String, sub: EmailNewsletter, timestamp: Instant, updateExistingOnlyField: Boolean = false): List[BrazeEvent] = {
     // Marketing need to be able to segment subscription events by campaign. To do this the campaign name must be in the name of the event,
     // (as braze can only segment by custom event name not property).
-    val newsletterEventName = if (isSubscribed) s"${sub.brazeSubscribeEventNamePrefix}_subscribe_email_date" else s"${sub.brazeSubscribeEventNamePrefix}_unsubscribe_email_date"
+    val newsletterEventName = s"${sub.brazeSubscribeEventNamePrefix}_unsubscribe_email_date"
 
-    val generalEventName = if (isSubscribed) "EditorialSubscribe" else "EditorialUnsubscribe"
-    // TODO: Do we need to handle subscription? Or just unsubscribe?
+    val generalEventName = "EditorialUnsubscribe"
     List(
       BrazeEvent(externalId, generalEventName, timestamp.toString, BrazeEventProperties(sub.brazeSubscribeAttributeName), updateExistingOnlyField),
       BrazeEvent(externalId, newsletterEventName, timestamp.toString, BrazeEventProperties(sub.brazeSubscribeAttributeName), updateExistingOnlyField)
@@ -84,8 +83,8 @@ case class UserTrackRequest(attributes: Seq[BrazeNewsletterSubscriptionsUpdate],
 
 object UserTrackRequest {
   def apply(userUpdate: BrazeNewsletterSubscriptionsUpdate, timestamp: Instant): UserTrackRequest = {
-    val events = userUpdate.newsletterSubscriptions.flatMap { case (subscription, isSubscribed) =>
-      BrazeSubscribeEvent(userUpdate.externalId, subscription, isSubscribed, timestamp)
+    val events = userUpdate.newsletterSubscriptions.flatMap { case (subscription, _) =>
+      BrazeSubscribeEvent(userUpdate.externalId, subscription, timestamp)
     }
     UserTrackRequest(Seq(userUpdate), events.toSeq)
   }
