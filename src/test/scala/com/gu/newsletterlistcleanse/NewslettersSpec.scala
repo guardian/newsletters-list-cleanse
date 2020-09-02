@@ -81,4 +81,8 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
     result(1).cutOffDate should be(aDate.plusDays(999 - 61))
   }
 
+  "Requesting an EmailNewsletter from name" should "correctly return an EmailNewsletter" in {
+    val newsletterName = ""
+  }
+
 }

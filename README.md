@@ -31,7 +31,7 @@ runMain com.gu.newsletterlistcleanse.TestGetCleanseList
 
 ```sbtshell
 eval System.setProperty("Stage", "CODE")
-runMain com.gu.newsletterlistcleanse.UpdateBrazeUsersLambda
+runMain com.gu.newsletterlistcleanse.TestUpdateBrazeUsers
 ```
 
 
