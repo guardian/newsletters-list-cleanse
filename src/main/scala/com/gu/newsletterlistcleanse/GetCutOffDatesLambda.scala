@@ -20,8 +20,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 case class GetCutOffDatesLambdaInput(
   @BeanProperty
-  newslettersToProcess: List[String]
-)
+  newslettersToProcess: Option[List[String]]
+) {
+  // set a default constructor so Jackson is able to instantiate the class as a java bean
+  def this() = this(
+    newslettersToProcess = None
+  )
+}
 
 class GetCutOffDatesLambda {
 
@@ -50,8 +55,7 @@ class GetCutOffDatesLambda {
   def process(lambdaInput: GetCutOffDatesLambdaInput): Future[List[SendMessageResult]] = {
     val env = Env()
     logger.info(s"Starting $env")
-    val newslettersToProcess = Option(lambdaInput.newslettersToProcess) // this is set by AWS, so potentially null
-      .getOrElse(newsletters.allNewsletters)
+    val newslettersToProcess = lambdaInput.newslettersToProcess.getOrElse(newsletters.allNewsletters)
     val campaignSentDates = databaseOperations.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
@@ -62,7 +66,7 @@ class GetCutOffDatesLambda {
 object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
     val getCutOffDatesLambda = new GetCutOffDatesLambda()
-    val lambdaInput = GetCutOffDatesLambdaInput(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead"))
+    val lambdaInput = GetCutOffDatesLambdaInput(Some(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead")))
     Await.result(getCutOffDatesLambda.process(lambdaInput), getCutOffDatesLambda.timeout)
   }
 }
