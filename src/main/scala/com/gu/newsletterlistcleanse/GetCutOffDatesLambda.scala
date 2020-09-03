@@ -1,14 +1,15 @@
 package com.gu.newsletterlistcleanse
 
-import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import org.slf4j.{Logger, LoggerFactory}
 import io.circe.syntax._
 
@@ -16,18 +17,24 @@ import scala.beans.BeanProperty
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.io.Source
 
 case class GetCutOffDatesLambdaInput(
   @BeanProperty
-  newslettersToProcess: List[String]
-)
+  newslettersToProcess: Option[List[String]]
+) {
+  // set a default constructor so Jackson is able to instantiate the class as a java bean
+  def this() = this(
+    newslettersToProcess = None
+  )
+}
 
 class GetCutOffDatesLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val serviceAccountCredentials: InputStream = this.getClass.getClassLoader().getResource("service-account.json").openStream()
-  val databaseOperations: DatabaseOperations = new BigQueryOperations(serviceAccountCredentials)
+  val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
+  val sqsClient: AmazonSQSAsync = AwsSQSSend.buildSqsClient(credentialProvider)
+  val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
+  val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
   val newsletters: Newsletters = new Newsletters()
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
@@ -36,10 +43,10 @@ class GetCutOffDatesLambda {
     Await.result(process(lambdaInput), timeout)
   }
 
-  def sendCutOffDates(queueName: QueueName, cutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]] = {
+  def sendCutOffDates(cutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]] = {
     val results = cutOffDates.map { cutoffDate =>
       logger.info(s"Sending cut-off date: $cutoffDate")
-      AwsSQSSend.sendMessage(queueName, Payload(cutoffDate.asJson.noSpaces))
+      AwsSQSSend.sendMessage(sqsClient, config.cutOffSqsUrl, Payload(cutoffDate.asJson.noSpaces))
     }
 
     Future.sequence(results)
@@ -48,20 +55,18 @@ class GetCutOffDatesLambda {
   def process(lambdaInput: GetCutOffDatesLambdaInput): Future[List[SendMessageResult]] = {
     val env = Env()
     logger.info(s"Starting $env")
-    val newslettersToProcess = Option(lambdaInput.newslettersToProcess) // this is set by AWS, so potentially null
-      .getOrElse(newsletters.allNewsletters)
+    val newslettersToProcess = lambdaInput.newslettersToProcess.getOrElse(newsletters.allNewsletters)
     val campaignSentDates = databaseOperations.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
-    val queueName = QueueName(s"newsletter-newsletter-cut-off-date-${env.stage}")
-    sendCutOffDates(queueName, cutOffDates)
+    sendCutOffDates(cutOffDates)
   }
 }
 
 object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
     val getCutOffDatesLambda = new GetCutOffDatesLambda()
-    val lambdaInput = GetCutOffDatesLambdaInput(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead"))
+    val lambdaInput = GetCutOffDatesLambdaInput(Some(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead")))
     Await.result(getCutOffDatesLambda.process(lambdaInput), getCutOffDatesLambda.timeout)
   }
 }

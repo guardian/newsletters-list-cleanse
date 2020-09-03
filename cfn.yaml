@@ -65,6 +65,13 @@ Resources:
               Resource:
                 - !GetAtt NewsletterCutOffDateQueue.Arn
                 - !GetAtt CleanseListQueue.Arn
+        - PolicyName: ssm
+          PolicyDocument:
+            Statement:
+              Effect: Allow
+              Action:
+                - ssm:GetParametersByPath
+              Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Stack}/${App}/${Stage}
 
   GetCutOffDatesLambda:
     Type: AWS::Lambda::Function

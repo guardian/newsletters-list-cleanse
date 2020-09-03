@@ -8,5 +8,5 @@ object Env {
   def apply(): Env = Env(
     Option(System.getenv("App")).getOrElse("DEV"),
     Option(System.getenv("Stack")).getOrElse("DEV"),
-    Option(System.getenv("Stage")).getOrElse("DEV"))
+    Option(System.getenv("Stage")).getOrElse("CODE"))
 }

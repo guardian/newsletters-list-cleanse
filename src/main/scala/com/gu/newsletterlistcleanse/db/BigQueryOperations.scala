@@ -1,6 +1,7 @@
 package com.gu.newsletterlistcleanse.db
 
-import java.io.InputStream
+import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
 import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
@@ -10,18 +11,20 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 
 import scala.collection.JavaConverters._
 
-class BigQueryOperations(googleCredentials: InputStream) extends DatabaseOperations {
+class BigQueryOperations(serviceAccount: String, projectId: String) extends DatabaseOperations {
 
-  val credentials: Credentials = ServiceAccountCredentials
-    .fromStream(googleCredentials)
+  private val serviceAccountInputStream = new ByteArrayInputStream(serviceAccount.getBytes(StandardCharsets.UTF_8))
+
+  private val credentials: Credentials = ServiceAccountCredentials
+    .fromStream(serviceAccountInputStream)
     .toBuilder
     .setScopes(List("https://www.googleapis.com/auth/bigquery").asJavaCollection)
     .build()
 
-  val bigQuery: BigQuery = BigQueryOptions
+  private val bigQuery: BigQuery = BigQueryOptions
     .newBuilder()
     .setCredentials(credentials)
-    .setProjectId("datatech-platform-code")
+    .setProjectId(projectId)
     .build()
     .getService
 

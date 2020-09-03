@@ -1,14 +1,15 @@
 package com.gu.newsletterlistcleanse
 
-import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import com.gu.newsletterlistcleanse.EitherConverter.EitherList
 import io.circe
 import io.circe.parser._
@@ -21,11 +22,14 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
-object GetCleanseListLambda {
+class GetCleanseListLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val serviceAccountCredentials: InputStream = this.getClass.getClassLoader().getResource("service-account.json").openStream()
-  val databaseOperations: DatabaseOperations = new BigQueryOperations(serviceAccountCredentials)
+
+  val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
+  val sqsClient: AmazonSQSAsync = AwsSQSSend.buildSqsClient(credentialProvider)
+  val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
+  val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
@@ -47,14 +51,13 @@ object GetCleanseListLambda {
     }).toEitherList
   }
 
-  def sendCleanseList(queueName: QueueName, cleanseList: CleanseList): Future[SendMessageResult] = {
-    AwsSQSSend.sendMessage(queueName, Payload(cleanseList.asJson.noSpaces))
+  def sendCleanseList(cleanseList: CleanseList): Future[SendMessageResult] = {
+    AwsSQSSend.sendMessage(sqsClient, config.cleanseListSqsUrl, Payload(cleanseList.asJson.noSpaces))
   }
 
   def process(campaignCutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]]  = {
     val env = Env()
     logger.info(s"Starting $env")
-    val queueName = QueueName(s"newsletter-cleanse-list-${env.stage}")
 
     val results = for {
       campaignCutOff <- campaignCutOffDates
@@ -67,8 +70,8 @@ object GetCleanseListLambda {
       batchedCleanseList = cleanseList.getCleanseListBatches(5000)
       (batch, index) <- batchedCleanseList.zipWithIndex
     } yield {
-      logger.info(s"Sending batch $index of ${batch.newsletterName} to ${queueName.value}")
-      sendCleanseList(queueName, batch)
+      logger.info(s"Sending batch $index of ${batch.newsletterName}")
+      sendCleanseList(batch)
     }
 
     Future.sequence(results)
@@ -79,6 +82,7 @@ object TestGetCleanseList {
   def main(args: Array[String]): Unit = {
     val json = """{"newsletterName":"Editorial_AnimalsFarmed","cutOffDate":"2020-01-21T11:31:14Z[Europe/London]"}"""
     val parsedJson = decode[NewsletterCutOff](json).right.get
-    Await.result(GetCleanseListLambda.process(List(parsedJson)), GetCleanseListLambda.timeout)
+    val getCleanseListLambda = new GetCleanseListLambda
+    Await.result(getCleanseListLambda.process(List(parsedJson)), getCleanseListLambda.timeout)
   }
 }
