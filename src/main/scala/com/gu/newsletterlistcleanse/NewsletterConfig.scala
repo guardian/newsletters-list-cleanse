@@ -6,6 +6,7 @@ import com.gu.conf.{ConfigurationLoader, SSMConfigurationLocation}
 
 case class NewsletterConfig(
   serviceAccount: String,
+  projectId: String,
   brazeApiToken: String,
   cutOffSqsUrl: String,
   cleanseListSqsUrl: String
@@ -19,6 +20,7 @@ object NewsletterConfig {
     }
     NewsletterConfig(
       serviceAccount = config.getString("serviceAccount"),
+      projectId = config.getString("projectId"),
       brazeApiToken = config.getString("brazeApiToken"),
       cutOffSqsUrl = config.getString("cutOffSqsUrl"),
       cleanseListSqsUrl = config.getString("cleanseListSqsUrl")

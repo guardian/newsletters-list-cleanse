@@ -4,11 +4,12 @@ import java.util.concurrent.TimeUnit
 
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import com.gu.newsletterlistcleanse.EitherConverter.EitherList
 import io.circe
 import io.circe.parser._
@@ -26,9 +27,9 @@ class GetCleanseListLambda {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
-  val sqsClient = AwsSQSSend.buildSqsClient(credentialProvider)
+  val sqsClient: AmazonSQSAsync = AwsSQSSend.buildSqsClient(credentialProvider)
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
-  val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount)
+  val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 

@@ -11,7 +11,7 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 
 import scala.collection.JavaConverters._
 
-class BigQueryOperations(serviceAccount: String) extends DatabaseOperations {
+class BigQueryOperations(serviceAccount: String, projectId: String) extends DatabaseOperations {
 
   private val serviceAccountInputStream = new ByteArrayInputStream(serviceAccount.getBytes(StandardCharsets.UTF_8))
 
@@ -24,7 +24,7 @@ class BigQueryOperations(serviceAccount: String) extends DatabaseOperations {
   private val bigQuery: BigQuery = BigQueryOptions
     .newBuilder()
     .setCredentials(credentials)
-    .setProjectId("datatech-platform-code")
+    .setProjectId(projectId)
     .build()
     .getService
 

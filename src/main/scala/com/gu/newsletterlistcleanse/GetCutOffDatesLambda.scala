@@ -1,15 +1,15 @@
 package com.gu.newsletterlistcleanse
 
-import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.{Payload, QueueName}
+import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import org.slf4j.{Logger, LoggerFactory}
 import io.circe.syntax._
 
@@ -27,9 +27,9 @@ class GetCutOffDatesLambda {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
   val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
-  val sqsClient = AwsSQSSend.buildSqsClient(credentialProvider)
+  val sqsClient: AmazonSQSAsync = AwsSQSSend.buildSqsClient(credentialProvider)
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
-  val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount)
+  val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
   val newsletters: Newsletters = new Newsletters()
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
