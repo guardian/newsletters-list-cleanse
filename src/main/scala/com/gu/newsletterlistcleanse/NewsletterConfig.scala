@@ -16,7 +16,7 @@ object NewsletterConfig {
   def load(credentialProvider: AWSCredentialsProvider): NewsletterConfig = {
     val identity = AppIdentity.whoAmI(defaultAppName = "newsletter-list-cleanse", credentialProvider)
     val config = ConfigurationLoader.load(identity, credentialProvider) {
-      case identity: AwsIdentity => SSMConfigurationLocation.default(identity)
+      case identity: AwsIdentity => SSMConfigurationLocation(s"/${identity.stack}/${identity.app}/${identity.stage}")
     }
     NewsletterConfig(
       serviceAccount = config.getString("serviceAccount"),
