@@ -9,7 +9,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.Future
 
 object AwsSQSSend {
-  case class QueueName(value: String) extends AnyVal
 
   case class Payload(value: String) extends AnyVal
 
