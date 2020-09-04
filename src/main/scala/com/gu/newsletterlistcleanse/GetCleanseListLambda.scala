@@ -11,6 +11,7 @@ import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import com.gu.newsletterlistcleanse.EitherConverter.EitherList
+
 import io.circe
 import io.circe.parser._
 import io.circe.syntax._
@@ -66,7 +67,9 @@ class GetCleanseListLambda {
         campaignCutOff.newsletterName,
         userIds
       )
-      _ = logger.info(s"Found ${userIds.length} users to remove from ${campaignCutOff.newsletterName}")
+
+      _ = logger.info(s"Found ${userIds.length} users of ${campaignCutOff.activeListLength} to remove from ${campaignCutOff.newsletterName}")
+
       batchedCleanseList = cleanseList.getCleanseListBatches(5000)
       (batch, index) <- batchedCleanseList.zipWithIndex
     } yield {

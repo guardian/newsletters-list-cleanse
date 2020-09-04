@@ -11,7 +11,7 @@ import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import org.slf4j.{Logger, LoggerFactory}
-import io.circe.syntax._
+import io.circe.syntax.EncoderOps
 
 import scala.beans.BeanProperty
 import scala.concurrent.duration.Duration
@@ -43,12 +43,11 @@ class GetCutOffDatesLambda {
     Await.result(process(lambdaInput), timeout)
   }
 
-  def sendCutOffDates(cutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]] = {
+  def sendCutOffs(cutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]] = {
     val results = cutOffDates.map { cutoffDate =>
       logger.info(s"Sending cut-off date: $cutoffDate")
       AwsSQSSend.sendMessage(sqsClient, config.cutOffSqsUrl, Payload(cutoffDate.asJson.noSpaces))
     }
-
     Future.sequence(results)
   }
 
@@ -56,10 +55,11 @@ class GetCutOffDatesLambda {
     val env = Env()
     logger.info(s"Starting $env")
     val newslettersToProcess = lambdaInput.newslettersToProcess.getOrElse(newsletters.allNewsletters)
+    val listLengths = databaseOperations.fetchCampaignActiveListLength(newslettersToProcess)
     val campaignSentDates = databaseOperations.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
-    val cutOffDates = newsletters.computeCutOffDates(campaignSentDates)
+    val cutOffDates = newsletters.computeCutOffDates(campaignSentDates, listLengths)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
-    sendCutOffDates(cutOffDates)
+    sendCutOffs(cutOffDates)
   }
 }
 

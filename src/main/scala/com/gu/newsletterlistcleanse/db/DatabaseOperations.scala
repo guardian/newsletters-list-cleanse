@@ -6,6 +6,8 @@ trait DatabaseOperations {
   def fetchCampaignSentDates(campaignNames: List[String], cutOffLength: Int): List[CampaignSentDate]
 
   def fetchCampaignCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID]
+
+  def fetchCampaignActiveListLength(newsletterNames: List[String]): List[ActiveListLength]
 }
 
 
