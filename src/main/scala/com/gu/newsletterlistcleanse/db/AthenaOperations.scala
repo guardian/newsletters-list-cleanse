@@ -61,14 +61,13 @@ class AthenaOperations extends DatabaseOperations {
     }
   }
 
-  override def fetchCampaignActiveListLength(newsletterCutOffs: List[NewsletterCutOff]): List[ActiveListLength] = {
-    val campaignNames = newsletterCutOffs.map(_.newsletterName)
+  override def fetchCampaignActiveListLength(newsletterNames: List[String]): List[ActiveListLength] = {
     DB.athena { implicit session =>
       sql"""SELECT newsletter_name,
            |         count(identity_id) AS list_length
            |FROM "clean"."braze_newsletter_membership"
            |WHERE customer_status='active'
-           |        AND newsletter_name IN ($campaignNames)
+           |        AND newsletter_name IN ($newsletterNames)
            |GROUP BY  newsletter_name;""".stripMargin.map(ActiveListLength.fromRow).list.apply()
     }
   }

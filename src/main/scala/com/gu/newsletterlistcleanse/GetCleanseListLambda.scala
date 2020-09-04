@@ -11,7 +11,7 @@ import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import com.gu.newsletterlistcleanse.EitherConverter.EitherList
-import com.gu.newsletterlistcleanse.db.ActiveListLength.getActiveListLength
+
 import io.circe
 import io.circe.parser._
 import io.circe.syntax._
@@ -59,7 +59,6 @@ class GetCleanseListLambda {
   def process(campaignCutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]]  = {
     val env = Env()
     logger.info(s"Starting $env")
-    val listLengths = databaseOperations.fetchCampaignActiveListLength(campaignCutOffDates)
 
     val results = for {
       campaignCutOff <- campaignCutOffDates
@@ -69,8 +68,7 @@ class GetCleanseListLambda {
         userIds
       )
 
-      activeCount = getActiveListLength(listLengths, campaignCutOff.newsletterName)
-      _ = logger.info(s"Found ${userIds.length} users of $activeCount to remove from ${campaignCutOff.newsletterName}")
+      _ = logger.info(s"Found ${userIds.length} users of ${campaignCutOff.activeListLength} to remove from ${campaignCutOff.newsletterName}")
 
       batchedCleanseList = cleanseList.getCleanseListBatches(5000)
       (batch, index) <- batchedCleanseList.zipWithIndex

@@ -7,7 +7,7 @@ trait DatabaseOperations {
 
   def fetchCampaignCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID]
 
-  def fetchCampaignActiveListLength(newsletterCutOffs: List[NewsletterCutOff]): List[ActiveListLength]
+  def fetchCampaignActiveListLength(newsletterNames: List[String]): List[ActiveListLength]
 }
 
 
