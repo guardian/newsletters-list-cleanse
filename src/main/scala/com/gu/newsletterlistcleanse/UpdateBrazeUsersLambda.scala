@@ -55,7 +55,7 @@ class UpdateBrazeUsersLambda {
   }
 
   def getInvalidUsers(userIds: List[String]): Future[Either[BrazeError, List[String]]] = {
-    val request: UserExportRequest = UserExportRequest.apply(userIds)
+    val request: UserExportRequest = UserExportRequest(userIds)
     BrazeClient.getInvalidUsers(apiKey, request)
   }
 
@@ -76,7 +76,7 @@ class UpdateBrazeUsersLambda {
     } yield {
       val subscriptionsUpdate = BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
 
-      UserTrackRequest.apply(subscriptionsUpdate, timestamp)
+      UserTrackRequest(subscriptionsUpdate, timestamp)
     }
     BrazeClient.updateUser(apiKey, requests)
   }
