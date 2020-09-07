@@ -24,8 +24,8 @@ class UpdateBrazeUsersLambda {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
-  val apiKey: String = config.brazeApiToken
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
+  val apiKey: String = config.brazeApiToken
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
@@ -74,11 +74,10 @@ class UpdateBrazeUsersLambda {
     val requests = for {
       userId <- userIds
     } yield {
-      val subscriptionsUpdate = BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
-
-      UserTrackRequest(subscriptionsUpdate, timestamp)
+      BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
     }
-    BrazeClient.updateUser(apiKey, requests)
+
+    BrazeClient.updateUser(apiKey, UserTrackRequest(requests, timestamp))
   }
 
   private def sendBrazeUpdates(cleanseLists: List[CleanseList], allInvalidUsers: Set[String]): Future[Either[List[BrazeError], List[SimpleBrazeResponse]]] = {
@@ -110,7 +109,7 @@ class UpdateBrazeUsersLambda {
 
 object TestUpdateBrazeUsers {
   def main(args: Array[String]): Unit = {
-    val cleanseLists = List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb")))
+    val cleanseLists = List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb", "mystery_user 1")))
     val updateBrazeUsersLambda = new UpdateBrazeUsersLambda()
     println(updateBrazeUsersLambda.process(cleanseLists))
   }

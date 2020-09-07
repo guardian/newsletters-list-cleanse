@@ -30,11 +30,11 @@ object BrazeClient {
       result <- results
       } {
         result.foreach { successResult =>
-          logger.info(s"BrazeClient success $info $successResult")
+          logger.info(s"BrazeClient success: $info $successResult")
         }
 
         result.left.foreach { errorResult =>
-          logger.error(s"BrazeClient failure $info $errorResult")
+          logger.error(s"BrazeClient failure: $info $errorResult")
         }
       }
 
@@ -62,7 +62,7 @@ object BrazeClient {
     })
   }
 
-  def updateUser(apiKey: String, requests: List[UserTrackRequest]): Future[Either[BrazeError, SimpleBrazeResponse]] = {
+  def updateUser(apiKey: String, requests: UserTrackRequest): Future[Either[BrazeError, SimpleBrazeResponse]] = {
     val jsonRequest = requests.asJson.toString
     // TODO: Make logging more useful whilst maintaining data security
     withClientLogging(s"updating user subscriptions"){
@@ -80,7 +80,7 @@ object BrazeClient {
 
   def getInvalidUsers(apiKey: String, request: UserExportRequest): Future[Either[BrazeError, List[String]]] = {
     val jsonRequest = request.asJson.toString
-    withClientLogging(s"Checking for invalid user IDs") {
+    withClientLogging(s"getting invalid user IDs") {
       val response = basicRequest
         .post(uri"$brazeEndpoint/users/export/ids")
         .readTimeout(timeout)
