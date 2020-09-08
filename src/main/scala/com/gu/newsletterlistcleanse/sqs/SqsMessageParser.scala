@@ -9,9 +9,8 @@ import com.gu.newsletterlistcleanse.EitherConverter.EitherList
 
 
 
-object ParseSqsMessage {
-
-  def apply[T: Decoder](sqsEvent: SQSEvent): Either[List[circe.Error], List[T]] = {
+object SqsMessageParser {
+  def parse[T: Decoder](sqsEvent: SQSEvent): Either[List[circe.Error], List[T]] = {
     (for {
       message <- sqsEvent.getRecords.asScala.toList
     } yield {

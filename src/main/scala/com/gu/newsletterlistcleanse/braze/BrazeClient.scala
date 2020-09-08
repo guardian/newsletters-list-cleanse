@@ -26,22 +26,15 @@ object BrazeClient {
   private def withClientLogging[A](info: => String)(block: => Future[Either[BrazeError,A]]): Future[Either[BrazeError, A]] = {
     val results = block
 
-    for {
-      result <- results
-      } {
-        result.foreach { successResult =>
-          logger.info(s"BrazeClient success: $info $successResult")
-        }
-
-        result.left.foreach { errorResult =>
-          logger.error(s"BrazeClient failure: $info $errorResult")
-        }
-      }
+    results.foreach {
+      case Right(successResult) => logger.info(s"BrazeClient success: $info $successResult")
+      case Left(errorResult) => logger.error(s"BrazeClient failure: $info $errorResult")
+    }
 
     results
   }
 
-  private def parseValidateResponse[T: Decoder](response: Future[Response[Either[String, String]]]): Future[Either[BrazeError, T]] = {
+  private def parseValidateResponse[T: Decoder](response: Response[Either[String, String]]): Either[BrazeError, T] = {
 
     def parseResponse[T: Decoder](body: String, code: Int) = {
       decode[T](body) match {
@@ -52,14 +45,12 @@ object BrazeClient {
       }
     }
 
-    response.map(r => {
-      r.body match {
-        case Left(requestError) =>
-          Left(BrazeError(r.code.code, requestError))
-        case Right(body) =>
-          parseResponse[T](body, r.code.code)
-      }
-    })
+    response.body match {
+      case Left(requestError) =>
+        Left(BrazeError(response.code.code, requestError))
+      case Right(body) =>
+        parseResponse[T](body, response.code.code)
+    }
   }
 
   def updateUser(apiKey: String, requests: UserTrackRequest): Future[Either[BrazeError, SimpleBrazeResponse]] = {
@@ -74,7 +65,7 @@ object BrazeClient {
         .body(jsonRequest)
         .send()
 
-      parseValidateResponse[SimpleBrazeResponse](response)
+      response.map(parseValidateResponse[SimpleBrazeResponse])
     }
   }
 
@@ -90,10 +81,10 @@ object BrazeClient {
         .send()
 
 
-      parseValidateResponse[ExportIdBrazeResponse](response).map(response =>
-        response match {
-        case Left(error) => Left(error)
-        case Right(validResponse) => Right(validResponse.invalidUserIds)
+      response.map(parseValidateResponse[ExportIdBrazeResponse]).map(parsedResponse =>
+        parsedResponse match {
+          case Left(error) => Left(error)
+          case Right(validResponse) => Right(validResponse.invalidUserIds)
         }
       )
     }

@@ -10,7 +10,7 @@ import com.gu.newsletterlistcleanse.Newsletters.getIdentityNewsletterFromName
 import com.gu.newsletterlistcleanse.braze.{BrazeClient, BrazeError, BrazeNewsletterSubscriptionsUpdate, SimpleBrazeResponse, UserExportRequest, UserTrackRequest}
 import com.gu.newsletterlistcleanse.models.CleanseList
 import com.gu.identity.model.EmailNewsletter
-import com.gu.newsletterlistcleanse.sqs.ParseSqsMessage
+import com.gu.newsletterlistcleanse.sqs.SqsMessageParser
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.duration.Duration
@@ -23,14 +23,12 @@ class UpdateBrazeUsersLambda {
 
   val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
-  val apiKey: String = config.brazeApiToken
-
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
   def handler(sqsEvent: SQSEvent): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
-    ParseSqsMessage[CleanseList](sqsEvent) match {
+    SqsMessageParser.parse[CleanseList](sqsEvent) match {
       case Right(cleanseLists) =>
         resolveBrazeUpdates(cleanseLists)
       case Left(parseErrors) =>
@@ -48,7 +46,7 @@ class UpdateBrazeUsersLambda {
   }
 
   private def getInvalidUsers(userIds: List[String]): Future[Either[BrazeError, List[String]]] =
-    BrazeClient.getInvalidUsers(apiKey, UserExportRequest(userIds))
+    BrazeClient.getInvalidUsers(config.brazeApiToken, UserExportRequest(userIds))
 
   private def getAllInvalidUsers(cleanseLists: List[CleanseList]): Future[Either[List[BrazeError], List[String]]] = {
     val allInvalidUserTasks: List[Future[Either[BrazeError, List[String]]]] = for {
@@ -60,13 +58,13 @@ class UpdateBrazeUsersLambda {
     Future.sequence(allInvalidUserTasks).map(invalidUsers => invalidUsers.toEitherList.map(_.flatten))
   }
 
-  private def updateUsers(apiKey: String, userIds: List[String], identityNewsletter: EmailNewsletter) = {
+  private def updateUsers(userIds: List[String], identityNewsletter: EmailNewsletter) = {
     val timestamp: Instant = Instant.now()
     val requests = for {
       userId <- userIds
     } yield BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
 
-    BrazeClient.updateUser(apiKey, UserTrackRequest(requests, timestamp))
+    BrazeClient.updateUser(config.brazeApiToken, UserTrackRequest(requests, timestamp))
   }
 
   private def sendBrazeUpdates(cleanseLists: List[CleanseList], allInvalidUsers: Set[String]): Future[Either[List[BrazeError], List[SimpleBrazeResponse]]] = {
@@ -80,7 +78,7 @@ class UpdateBrazeUsersLambda {
       batch <- batchedUserIds
       newsletterName = cleanseList.newsletterName
       identityNewsletter <- getIdentityNewsletterFromName(newsletterName)
-    } yield updateUsers(apiKey, batch.toList, identityNewsletter)
+    } yield updateUsers(batch.toList, identityNewsletter)
 
     Future.sequence(brazeResponses).map(brazeResponse => brazeResponse.toEitherList)
   }

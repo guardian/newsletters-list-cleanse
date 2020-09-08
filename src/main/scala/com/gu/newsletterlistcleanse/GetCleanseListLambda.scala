@@ -8,7 +8,7 @@ import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
-import com.gu.newsletterlistcleanse.sqs.{AwsSQSSend, ParseSqsMessage}
+import com.gu.newsletterlistcleanse.sqs.{AwsSQSSend, SqsMessageParser}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import io.circe.parser._
 import io.circe.syntax._
@@ -31,7 +31,7 @@ class GetCleanseListLambda {
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
   def handler(sqsEvent: SQSEvent): Unit = {
-    ParseSqsMessage[NewsletterCutOff](sqsEvent) match {
+    SqsMessageParser.parse[NewsletterCutOff](sqsEvent) match {
       case Right(newsletterCutOffs) =>
         Await.result(process(newsletterCutOffs), timeout)
       case Left(parseErrors) =>
