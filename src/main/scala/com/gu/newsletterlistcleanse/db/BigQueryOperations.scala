@@ -106,4 +106,26 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
       UserID(result.get("user_id").getStringValue)
     }
   }
+
+  override def fetchCampaignActiveListLength(newsletterNames: List[String]): List[ActiveListLength] = {
+    val sql = """SELECT newsletter_name,
+                 |         count(identity_id) AS listLength
+                 |FROM `datalake.braze_newsletter_membership`
+                 |WHERE customer_status='active'
+                 |        AND newsletter_name IN UNNEST(@newsletterNames)
+                 |GROUP BY newsletter_name;""".stripMargin
+
+    val queryConfig = QueryJobConfiguration.newBuilder(sql)
+      .addNamedParameter("newsletterNames", QueryParameterValue.array(newsletterNames.toArray, classOf[String]))
+      .setUseLegacySql(false)
+      .build()
+    val results = bigQuery.query(queryConfig)
+
+    results.iterateAll().asScala.toList.map { result =>
+      ActiveListLength(
+        newsletterName = result.get("newsletter_name").getStringValue,
+        listLength = result.get("listLength").getLongValue.toInt
+      )
+    }
+  }
 }

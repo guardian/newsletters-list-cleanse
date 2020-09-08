@@ -3,7 +3,8 @@ package com.gu.newsletterlistcleanse
 import java.time.ZonedDateTime
 
 import com.gu.identity.model.{EmailNewsletter, EmailNewsletters}
-import com.gu.newsletterlistcleanse.db.CampaignSentDate
+import com.gu.newsletterlistcleanse.db.ActiveListLength.getActiveListLength
+import com.gu.newsletterlistcleanse.db.{ActiveListLength, CampaignSentDate}
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 
 class Newsletters {
@@ -17,15 +18,17 @@ class Newsletters {
 
   private val reverseChrono: Ordering[ZonedDateTime] = (x: ZonedDateTime, y: ZonedDateTime) => y.compareTo(x)
 
-  def computeCutOffDates(campaignSentDates: List[CampaignSentDate]): List[NewsletterCutOff] = {
+  def computeCutOffDates(campaignSentDates: List[CampaignSentDate], listLengths: List[ActiveListLength]): List[NewsletterCutOff] = {
 
     def extractCutOffBasedOnCampaign(campaignName: String, sentDates: List[CampaignSentDate]): Option[NewsletterCutOff] = for {
+
       unOpenCount <- Newsletters.cleansingPolicy.get(campaignName)
+      activeCount = getActiveListLength(listLengths, campaignName)
       cutOff <- sentDates
         .sortBy(_.timestamp)(reverseChrono)
         .drop(unOpenCount)
         .headOption
-        .map(send => NewsletterCutOff(campaignName, send.timestamp))
+        .map(send => NewsletterCutOff(campaignName, send.timestamp, activeCount))
     } yield cutOff
 
     campaignSentDates.groupBy(_.campaignName)
