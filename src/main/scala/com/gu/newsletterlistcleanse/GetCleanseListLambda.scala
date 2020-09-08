@@ -8,15 +8,12 @@ import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
-import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
+import com.gu.newsletterlistcleanse.sqs.{AwsSQSSend, ParseSqsMessage}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
-import com.gu.newsletterlistcleanse.EitherConverter.EitherList
-import io.circe
 import io.circe.parser._
 import io.circe.syntax._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.collection.JavaConverters._
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.duration.Duration
@@ -34,21 +31,12 @@ class GetCleanseListLambda {
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
   def handler(sqsEvent: SQSEvent): Unit = {
-    parseCutoffsSqsMessage(sqsEvent) match {
+    ParseSqsMessage[NewsletterCutOff](sqsEvent) match {
       case Right(newsletterCutOffs) =>
         Await.result(process(newsletterCutOffs), timeout)
       case Left(parseErrors) =>
         parseErrors.foreach(e =>logger.error(e.getMessage))
     }
-  }
-
-  // TODO: Convert this to a generic function for use here and in UpdateBrazeUsers
-  def parseCutoffsSqsMessage(sqsEvent: SQSEvent): Either[List[circe.Error], List[NewsletterCutOff]] = {
-    (for {
-      message <- sqsEvent.getRecords.asScala.toList
-    } yield {
-      decode[NewsletterCutOff](message.getBody)
-    }).toEitherList
   }
 
   def sendCleanseList(cleanseList: CleanseList): Future[SendMessageResult] = {
