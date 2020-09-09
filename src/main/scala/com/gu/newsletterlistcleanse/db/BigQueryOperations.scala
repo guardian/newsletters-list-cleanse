@@ -8,6 +8,7 @@ import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import com.google.cloud.bigquery.{BigQuery, BigQueryOptions, FieldValueList, QueryJobConfiguration, QueryParameterValue}
 import com.google.auth.Credentials
 import com.google.auth.oauth2.ServiceAccountCredentials
+import com.gu.newsletterlistcleanse.Newsletters
 
 import scala.collection.JavaConverters._
 
@@ -64,7 +65,38 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
 
     val params = Map(
       "campaignNames" -> QueryParameterValue.array(campaignNames.toArray, classOf[String]),
-      "cutOffLength" -> QueryParameterValue.int64(94L)
+      "cutOffLength" -> QueryParameterValue.int64(cutOffLength: Integer)
+    )
+
+    selectData(sql, params) { result =>
+      CampaignSentDate(
+        campaignId = result.get("campaign_id").getStringValue,
+        campaignName = result.get("campaign_name").getStringValue,
+        timestamp = toUTCZonedDateTime(result.get("timestamp").getTimestampValue)
+      )
+    }
+  }
+
+  override def fetchGuardianTodayUKSentDates(cutOffLength: Int): List[CampaignSentDate] = {
+    val sql = """SELECT @guardianToday as campaign_name, campaign_id, timestamp FROM (
+                |  SELECT row_number() over(ORDER BY timestamp desc) AS rn, *
+                |  FROM (
+                |    SELECT
+                |      campaign_name,
+                |      campaign_id,
+                |      timestamp
+                |    FROM
+                |      `datalake.braze_dispatch`
+                |    WHERE campaign_name IN UNNEST(@campaignNames)
+                |  )
+                |)
+                |WHERE rn <= @cutOffLength
+                |order by timestamp desc;""".stripMargin
+
+    val params = Map(
+      "guardianToday" -> QueryParameterValue.string(Newsletters.guardianTodayUK),
+      "campaignNames" -> QueryParameterValue.array(Newsletters.guardianTodayUKCampaigns.toArray, classOf[String]),
+      "cutOffLength" -> QueryParameterValue.int64(cutOffLength: Integer)
     )
 
     selectData(sql, params) { result =>
@@ -120,7 +152,7 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                  |        AND newsletter_name IN UNNEST(@newsletterNames)
                  |GROUP BY newsletter_name;""".stripMargin
 
-    val params = Map("newsletterNames", QueryParameterValue.array(newsletterNames.toArray, classOf[String]))
+    val params = Map("newsletterNames" -> QueryParameterValue.array(newsletterNames.toArray, classOf[String]))
 
     selectData(sql, params) { result =>
       ActiveListLength(

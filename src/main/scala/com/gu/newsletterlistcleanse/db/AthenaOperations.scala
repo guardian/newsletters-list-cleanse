@@ -28,6 +28,8 @@ class AthenaOperations extends DatabaseOperations {
     }
   }
 
+  override def fetchGuardianTodayUKSentDates(cutOffLength: Int): List[CampaignSentDate] = ???
+
   override def fetchCampaignCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID] = {
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     val formattedDate = newsletterCutOff.cutOffDate.format(formatter)
