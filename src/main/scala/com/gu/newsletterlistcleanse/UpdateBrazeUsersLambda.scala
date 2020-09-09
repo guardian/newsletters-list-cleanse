@@ -25,6 +25,8 @@ class UpdateBrazeUsersLambda {
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
+  private val archiveFilterSet = config.archiveFilterSet
+
   def handler(sqsEvent: SQSEvent): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
@@ -73,7 +75,7 @@ class UpdateBrazeUsersLambda {
 
     val brazeResponses: List[Future[Either[BrazeError, SimpleBrazeResponse]]] = for {
       cleanseList <- cleanseLists
-      filteredUserIdList = cleanseList.userIdList.toSet -- allInvalidUsers
+      filteredUserIdList = cleanseList.userIdList.toSet -- (allInvalidUsers ++ archiveFilterSet)
       batchedUserIds = filteredUserIdList.grouped(updateBatchSize)
       batch <- batchedUserIds
       newsletterName = cleanseList.newsletterName
