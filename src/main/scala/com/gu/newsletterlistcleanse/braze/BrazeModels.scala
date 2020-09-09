@@ -3,23 +3,38 @@ package com.gu.newsletterlistcleanse.braze
 import java.time.Instant
 
 import com.gu.identity.model.{EmailNewsletter, EmailNewsletters}
-import scalaj.http.HttpResponse
+import sttp.client._
 import io.circe.{Decoder, Encoder, Json}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 import io.circe.syntax.EncoderOps
 
-case class BrazeResponse(message: String) {
-  def isSuccessful: Boolean = message == "success" || message == "queued"
+trait BrazeResponse {
+  val message: String
+  def isSuccessful: Boolean
 }
-object BrazeResponse {
-  implicit val brazeResponseEncoder: Encoder[BrazeResponse] = deriveEncoder
-  implicit val brazeResponseDecoder: Decoder[BrazeResponse] = deriveDecoder
+case class SimpleBrazeResponse(message: String) extends BrazeResponse {
+  override def isSuccessful: Boolean = message == "success" || message == "queued"
+}
+
+object SimpleBrazeResponse {
+  implicit val simpleBrazeResponseEncoder: Encoder[SimpleBrazeResponse] = deriveEncoder
+  implicit val simpleBrazeResponseDecoder: Decoder[SimpleBrazeResponse] = deriveDecoder
+}
+
+case class ExportIdBrazeResponse(message: String, invalidUserIds: List[String],
+                                 users: List[Map[String,String]]) extends BrazeResponse {
+  override def isSuccessful: Boolean = message == "success" || message == "queued"
+}
+object ExportIdBrazeResponse {
+  implicit val exportIdBrazeResponseEncoder: Encoder[ExportIdBrazeResponse] = deriveEncoder
+  implicit val exportIdBrazeResponseDecoder: Decoder[ExportIdBrazeResponse] =
+    Decoder.forProduct3("message", "invalid_user_ids", "users")(ExportIdBrazeResponse.apply)
 }
 
 case class BrazeError(code: Int, body: String)
 
 object BrazeError {
-  def apply(response: HttpResponse[String]): BrazeError = BrazeError(response.code, response.body)
+  def apply(response: Response[String]): BrazeError = BrazeError(response.code.code, response.body)
 }
 
 case class BrazeNewsletterSubscriptionsUpdate(externalId: String,
@@ -82,11 +97,14 @@ object BrazeSubscribeEvent {
 case class UserTrackRequest(attributes: Seq[BrazeNewsletterSubscriptionsUpdate], events: Seq[BrazeEvent])
 
 object UserTrackRequest {
-  def apply(userUpdate: BrazeNewsletterSubscriptionsUpdate, timestamp: Instant): UserTrackRequest = {
-    val events = userUpdate.newsletterSubscriptions.flatMap { case (subscription, _) =>
-      BrazeSubscribeEvent(userUpdate.externalId, subscription, timestamp)
-    }
-    UserTrackRequest(Seq(userUpdate), events.toSeq)
+  def apply(userUpdates: List[BrazeNewsletterSubscriptionsUpdate], timestamp: Instant): UserTrackRequest = {
+    val events = for {
+      userUpdate <- userUpdates
+      (subscription, _) <- userUpdate.newsletterSubscriptions
+      event <- BrazeSubscribeEvent(userUpdate.externalId, subscription, timestamp)
+    } yield event
+
+    UserTrackRequest(userUpdates, events)
   }
 
   implicit val userTrackRequestEncoder: Encoder[UserTrackRequest] = new Encoder[UserTrackRequest] {
@@ -96,4 +114,15 @@ object UserTrackRequest {
     )
   }
 
+}
+
+case class UserExportRequest(userIds: List[String])
+
+object UserExportRequest {
+  implicit val userExportRequestEncoder: Encoder[UserExportRequest] = new Encoder[UserExportRequest] {
+    override def apply(uer: UserExportRequest): Json = Json.obj(
+      ("external_ids", uer.userIds.asJson),
+      ("fields_to_export", List("external_id").asJson)
+    )
+  }
 }

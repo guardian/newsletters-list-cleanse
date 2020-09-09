@@ -40,7 +40,8 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-core" % "0.12.3",
   "io.circe" %% "circe-generic" % "0.12.3",
   "io.circe" %% "circe-parser"% "0.12.3",
-  "org.scalaj" %% "scalaj-http" % "2.4.2"
+  "com.softwaremill.sttp.client" %% "core" % "2.2.7",
+  "com.softwaremill.sttp.client" %% "async-http-client-backend-future" % "2.2.7"
 )
 assemblyJarName := s"${name.value}.jar"
 assemblyMergeStrategy in assembly := {
