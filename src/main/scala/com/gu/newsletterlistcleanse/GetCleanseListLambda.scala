@@ -60,8 +60,9 @@ class GetCleanseListLambda {
       campaignCutOff <- campaignCutOffDates
       userIds = fetchCampaignCleanseList(campaignCutOff)
       cleanseList = CleanseList(
-        campaignCutOff.newsletterName,
-        userIds
+        newsletterName = campaignCutOff.newsletterName,
+        userIdList = userIds,
+        dryRun = campaignCutOff.dryRun
       )
 
       _ = logger.info(s"Found ${userIds.length} users of ${campaignCutOff.activeListLength} to remove from ${campaignCutOff.newsletterName}")

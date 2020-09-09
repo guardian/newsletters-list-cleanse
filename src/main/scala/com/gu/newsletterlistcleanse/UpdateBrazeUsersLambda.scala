@@ -96,7 +96,7 @@ class UpdateBrazeUsersLambda {
 
 object TestUpdateBrazeUsers {
   def main(args: Array[String]): Unit = {
-    val cleanseLists = List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb", "mystery_user 1")))
+    val cleanseLists = List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb", "mystery_user 1"), dryRun = true))
     val updateBrazeUsersLambda = new UpdateBrazeUsersLambda()
     println(updateBrazeUsersLambda.getBrazeResults(cleanseLists))
   }
