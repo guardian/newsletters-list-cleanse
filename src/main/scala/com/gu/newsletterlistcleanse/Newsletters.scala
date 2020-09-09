@@ -26,7 +26,7 @@ class Newsletters {
       activeCount = getActiveListLength(listLengths, campaignName)
       cutOff <- sentDates
         .sortBy(_.timestamp)(reverseChrono)
-        .drop(unOpenCount)
+        .drop(unOpenCount - 1)
         .headOption
         .map(send => NewsletterCutOff(campaignName, send.timestamp, activeCount))
     } yield cutOff
