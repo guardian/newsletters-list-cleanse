@@ -62,15 +62,14 @@ class GetCutOffDatesLambda {
     } else Nil
     val cutOffDates = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
-    //sendCutOffs(cutOffDates)
-    Future.successful(Nil)
+    sendCutOffs(cutOffDates)
   }
 }
 
 object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
     val getCutOffDatesLambda = new GetCutOffDatesLambda()
-    val lambdaInput = GetCutOffDatesLambdaInput(None)
+    val lambdaInput = GetCutOffDatesLambdaInput(Some(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead")))
     Await.result(getCutOffDatesLambda.process(lambdaInput), getCutOffDatesLambda.timeout)
   }
 }
