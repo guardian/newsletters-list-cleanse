@@ -58,13 +58,18 @@ class UpdateBrazeUsersLambda {
     Future.sequence(allInvalidUserTasks).map(invalidUsers => invalidUsers.toEitherList.map(_.flatten))
   }
 
-  private def updateUsers(userIds: List[String], identityNewsletter: EmailNewsletter) = {
+  private def updateUsers(userIds: List[String], identityNewsletter: EmailNewsletter, dryRun: Boolean): Future[Either[BrazeError, SimpleBrazeResponse]] = {
     val timestamp: Instant = Instant.now()
     val requests = for {
       userId <- userIds
     } yield BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
 
-    BrazeClient.updateUser(config.brazeApiToken, UserTrackRequest(requests, timestamp))
+    if (!dryRun) {
+      BrazeClient.updateUser(config.brazeApiToken, UserTrackRequest(requests, timestamp))
+    } else {
+      logger.info(s"Dry-run, would have updated a batch of ${userIds.length} users, skipping")
+      Future.successful(Right(SimpleBrazeResponse("success")))
+    }
   }
 
   private def sendBrazeUpdates(cleanseLists: List[CleanseList], allInvalidUsers: Set[String]): Future[Either[List[BrazeError], List[SimpleBrazeResponse]]] = {
@@ -78,7 +83,7 @@ class UpdateBrazeUsersLambda {
       batch <- batchedUserIds
       newsletterName = cleanseList.newsletterName
       identityNewsletter <- getIdentityNewsletterFromName(newsletterName)
-    } yield updateUsers(batch.toList, identityNewsletter)
+    } yield updateUsers(batch.toList, identityNewsletter, cleanseList.dryRun)
 
     Future.sequence(brazeResponses).map(brazeResponse => brazeResponse.toEitherList)
   }
