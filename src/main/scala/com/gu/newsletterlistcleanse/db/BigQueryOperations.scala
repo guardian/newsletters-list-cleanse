@@ -37,7 +37,7 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
   override def fetchCampaignSentDates(campaignNames: List[String], cutOffLength: Int): List[CampaignSentDate] = {
 
     val sql = """SELECT campaign_name, campaign_id, timestamp FROM (
-                |  SELECT row_number() over(Partition by campaign_id ORDER BY campaign_id, timestamp desc) AS rn, *
+                |  SELECT row_number() over(PARTITION BY campaign_id ORDER BY campaign_id, timestamp desc) AS rn, *
                 |  FROM (
                 |    SELECT
                 |      campaign_name,
