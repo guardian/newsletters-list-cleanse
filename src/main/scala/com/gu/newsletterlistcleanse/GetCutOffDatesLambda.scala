@@ -20,11 +20,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 case class GetCutOffDatesLambdaInput(
   @BeanProperty
-  newslettersToProcess: Option[List[String]]
+  newslettersToProcess: Option[List[String]],
+  dryRun: Boolean
 ) {
   // set a default constructor so Jackson is able to instantiate the class as a java bean
   def this() = this(
-    newslettersToProcess = None
+    newslettersToProcess = None,
+    dryRun = true
   )
 }
 
@@ -60,7 +62,7 @@ class GetCutOffDatesLambda {
     val guardianTodayUKSentDates = if (newslettersToProcess.contains(Newsletters.guardianTodayUK)) {
       databaseOperations.fetchGuardianTodayUKSentDates(Newsletters.maxCutOffPeriod)
     } else Nil
-    val cutOffDates = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
+    val cutOffDates = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths, lambdaInput.dryRun)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
     sendCutOffs(cutOffDates)
   }
@@ -69,7 +71,7 @@ class GetCutOffDatesLambda {
 object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
     val getCutOffDatesLambda = new GetCutOffDatesLambda()
-    val lambdaInput = GetCutOffDatesLambdaInput(Some(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead")))
+    val lambdaInput = GetCutOffDatesLambdaInput(Some(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead")), dryRun = true)
     Await.result(getCutOffDatesLambda.process(lambdaInput), getCutOffDatesLambda.timeout)
   }
 }

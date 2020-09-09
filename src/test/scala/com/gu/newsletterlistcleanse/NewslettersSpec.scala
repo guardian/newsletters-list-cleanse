@@ -3,6 +3,7 @@ package com.gu.newsletterlistcleanse
 import java.time.ZonedDateTime
 
 import com.gu.newsletterlistcleanse.db.{ActiveListLength, CampaignSentDate}
+import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -22,8 +23,16 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
     ActiveListLength("Editorial_GuardianTodayUK", 100)
   )
 
+  def computeCutOffDates(
+    campaignSentDates: List[CampaignSentDate],
+    listLengths: List[ActiveListLength] = aListLength,
+    dryRun: Boolean = true
+  ): List[NewsletterCutOff] = {
+    newsletters.computeCutOffDates(campaignSentDates, listLengths, dryRun)
+  }
+
   "The Newsletter cut-off date calculation logic" should "ignore an empty list" in {
-    newsletters.computeCutOffDates(Nil, aListLength) should be(Nil)
+    computeCutOffDates(Nil) should be(Nil)
   }
 
   it should "ignore newsletters if not enough newsletters have been sent yet to start cleansing" in {
@@ -31,7 +40,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
     listOfSentDates.length should be(93)
-    val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
+    val result = computeCutOffDates(listOfSentDates)
     result should be(Nil)
   }
 
@@ -39,7 +48,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
     val listOfSentDates = Range(0, 94).toList.map { dateOffset =>
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
-    val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
+    val result = computeCutOffDates(listOfSentDates)
     result.head.cutOffDate should be(aDate)
   }
 
@@ -50,7 +59,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
         timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset)
       )
     }
-    val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
+    val result = computeCutOffDates(listOfSentDates)
     result should be(Nil)
   }
 
@@ -58,7 +67,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
     val listOfSentDates = Range(0, 1000).toList.map { dateOffset =>
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
-    val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
+    val result = computeCutOffDates(listOfSentDates)
     result.head.cutOffDate should be(aDate.plusDays(1000 - 94))
   }
 
@@ -66,7 +75,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
     val listOfSentDates = Random.shuffle(Range(0, 1000).toList).map { dateOffset =>
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
-    val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
+    val result = computeCutOffDates(listOfSentDates)
     result.head.cutOffDate should be(aDate.plusDays(1000 - 94))
   }
 
@@ -80,7 +89,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
         timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset)
       )
     }
-    val result = newsletters.computeCutOffDates(listOfSentDates1 ++ listOfSentDates2, aListLength)
+    val result = computeCutOffDates(listOfSentDates1 ++ listOfSentDates2)
     result.head.cutOffDate should be(aDate.plusDays(1000 - 94))
     result(1).cutOffDate should be(aDate.plusDays(1000 - 61))
   }

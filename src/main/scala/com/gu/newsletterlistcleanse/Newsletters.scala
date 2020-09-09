@@ -18,7 +18,7 @@ class Newsletters {
 
   private val reverseChrono: Ordering[ZonedDateTime] = (x: ZonedDateTime, y: ZonedDateTime) => y.compareTo(x)
 
-  def computeCutOffDates(campaignSentDates: List[CampaignSentDate], listLengths: List[ActiveListLength]): List[NewsletterCutOff] = {
+  def computeCutOffDates(campaignSentDates: List[CampaignSentDate], listLengths: List[ActiveListLength], dryRun: Boolean): List[NewsletterCutOff] = {
 
     def extractCutOffBasedOnCampaign(campaignName: String, sentDates: List[CampaignSentDate]): Option[NewsletterCutOff] = for {
 
@@ -28,7 +28,7 @@ class Newsletters {
         .sortBy(_.timestamp)(reverseChrono)
         .drop(unOpenCount - 1)
         .headOption
-        .map(send => NewsletterCutOff(campaignName, send.timestamp, activeCount))
+        .map(send => NewsletterCutOff(campaignName, send.timestamp, activeCount, dryRun))
     } yield cutOff
 
     campaignSentDates.groupBy(_.campaignName)

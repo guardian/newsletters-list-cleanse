@@ -8,7 +8,8 @@ import io.circe.generic.semiauto.{deriveEncoder, deriveDecoder}
 case class NewsletterCutOff(
   newsletterName: String,
   cutOffDate: ZonedDateTime,
-  activeListLength: Int
+  activeListLength: Int,
+  dryRun: Boolean
 )
 
 object NewsletterCutOff {
