@@ -8,6 +8,9 @@ import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 import scala.concurrent.duration._
 import io.circe.parser.decode
 import io.circe.syntax._
+import org.asynchttpclient.{AsyncHttpClient, DefaultAsyncHttpClientConfig}
+import org.asynchttpclient.Dsl.{asyncHttpClient, config}
+import sttp.client.asynchttpclient.WebSocketHandler
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,9 +19,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object BrazeClient {
 
   private val timeout = 5000.seconds
-  implicit val sttpBackend = AsyncHttpClientFutureBackend(
-    options=SttpBackendOptions.connectionTimeout(timeout)
-  )
+
+  private val sttpOptions = SttpBackendOptions.connectionTimeout(timeout)
+  private val adjustFunction: DefaultAsyncHttpClientConfig.Builder => DefaultAsyncHttpClientConfig.Builder =
+    (defaultConfig) => defaultConfig.setMaxConnections(3)
+  implicit val sttpBackend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend
+    .usingConfigBuilder(adjustFunction, sttpOptions)
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
   val brazeEndpoint = "https://rest.fra-01.braze.eu"
