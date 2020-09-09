@@ -37,7 +37,7 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
   override def fetchCampaignSentDates(campaignNames: List[String], cutOffLength: Int): List[CampaignSentDate] = {
 
     val sql = """SELECT campaign_name, campaign_id, timestamp FROM (
-                |  SELECT row_number() over(PARTITION BY campaign_name) AS rn, *
+                |  SELECT row_number() over(PARTITION BY campaign_id ORDER BY campaign_id, timestamp desc) AS rn, *
                 |  FROM (
                 |    SELECT
                 |      campaign_name,
@@ -46,10 +46,10 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                 |    FROM
                 |      `datalake.braze_dispatch`
                 |    WHERE campaign_name IN UNNEST(@campaignNames)
-                |    ORDER BY timestamp DESC
                 |  )
                 |)
-                |WHERE rn <= @cutOffLength""".stripMargin
+                |WHERE rn <= @cutOffLength
+                |order by campaign_name, timestamp desc""".stripMargin
 
     val queryConfig = QueryJobConfiguration.newBuilder(sql)
       .addNamedParameter("campaignNames", QueryParameterValue.array(campaignNames.toArray, classOf[String]))
