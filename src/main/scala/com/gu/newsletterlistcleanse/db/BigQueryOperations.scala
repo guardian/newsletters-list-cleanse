@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
-import com.google.cloud.bigquery.{BigQuery, BigQueryOptions, QueryJobConfiguration, QueryParameterValue}
+import com.google.cloud.bigquery.{BigQuery, BigQueryOptions, FieldValueList, QueryJobConfiguration, QueryParameterValue}
 import com.google.auth.Credentials
 import com.google.auth.oauth2.ServiceAccountCredentials
 
@@ -34,6 +34,17 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
 
   private def toBigQueryTimestamp(zonedDateTime: ZonedDateTime): Long = zonedDateTime.toInstant.toEpochMilli * 1000
 
+  private def selectData[A](sql: String, params: Map[String, QueryParameterValue])(transform: FieldValueList => A): List[A] = {
+    val queryConfig = QueryJobConfiguration.newBuilder(sql)
+      .setNamedParameters(params.asJava)
+      .setUseLegacySql(false)
+      .build()
+
+    val results = bigQuery.query(queryConfig)
+
+    results.iterateAll().asScala.toList.map(transform)
+  }
+
   override def fetchCampaignSentDates(campaignNames: List[String], cutOffLength: Int): List[CampaignSentDate] = {
 
     val sql = """SELECT campaign_name, campaign_id, timestamp FROM (
@@ -51,15 +62,12 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                 |WHERE rn <= @cutOffLength
                 |order by campaign_name, timestamp desc""".stripMargin
 
-    val queryConfig = QueryJobConfiguration.newBuilder(sql)
-      .addNamedParameter("campaignNames", QueryParameterValue.array(campaignNames.toArray, classOf[String]))
-      .addNamedParameter("cutOffLength", QueryParameterValue.int64(94L))
-      .setUseLegacySql(false)
-      .build()
+    val params = Map(
+      "campaignNames" -> QueryParameterValue.array(campaignNames.toArray, classOf[String]),
+      "cutOffLength" -> QueryParameterValue.int64(94L)
+    )
 
-    val results = bigQuery.query(queryConfig)
-
-    results.iterateAll().asScala.toList.map { result =>
+    selectData(sql, params) { result =>
       CampaignSentDate(
         campaignId = result.get("campaign_id").getStringValue,
         campaignName = result.get("campaign_name").getStringValue,
@@ -94,15 +102,12 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                 |AND send.identity_id = users.identity_id
                 |AND send.event_date >= DATE(@formattedDate)""".stripMargin
 
-    val queryConfig = QueryJobConfiguration.newBuilder(sql)
-      .addNamedParameter("campaignName", QueryParameterValue.string(newsletterCutOff.newsletterName))
-      .addNamedParameter("formattedDate", QueryParameterValue.timestamp(toBigQueryTimestamp(newsletterCutOff.cutOffDate)))
-      .setUseLegacySql(false)
-      .build()
+    val params = Map(
+      "campaignName" -> QueryParameterValue.string(newsletterCutOff.newsletterName),
+      "formattedDate" -> QueryParameterValue.timestamp(toBigQueryTimestamp(newsletterCutOff.cutOffDate))
+    )
 
-    val results = bigQuery.query(queryConfig)
-
-    results.iterateAll().asScala.toList.map { result =>
+    selectData(sql, params) { result =>
       UserID(result.get("user_id").getStringValue)
     }
   }
@@ -115,13 +120,9 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                  |        AND newsletter_name IN UNNEST(@newsletterNames)
                  |GROUP BY newsletter_name;""".stripMargin
 
-    val queryConfig = QueryJobConfiguration.newBuilder(sql)
-      .addNamedParameter("newsletterNames", QueryParameterValue.array(newsletterNames.toArray, classOf[String]))
-      .setUseLegacySql(false)
-      .build()
-    val results = bigQuery.query(queryConfig)
+    val params = Map("newsletterNames", QueryParameterValue.array(newsletterNames.toArray, classOf[String]))
 
-    results.iterateAll().asScala.toList.map { result =>
+    selectData(sql, params) { result =>
       ActiveListLength(
         newsletterName = result.get("newsletter_name").getStringValue,
         listLength = result.get("listLength").getLongValue.toInt
