@@ -26,7 +26,7 @@ class Newsletters {
       activeCount = getActiveListLength(listLengths, campaignName)
       cutOff <- sentDates
         .sortBy(_.timestamp)(reverseChrono)
-        .drop(unOpenCount)
+        .drop(unOpenCount - 1)
         .headOption
         .map(send => NewsletterCutOff(campaignName, send.timestamp, activeCount))
     } yield cutOff
@@ -91,6 +91,9 @@ object Newsletters {
   )
 
   val maxCutOffPeriod = cleansingPolicy.valuesIterator.max
+
+  val guardianTodayUK = "Editorial_GuardianTodayUK"
+  val guardianTodayUKCampaigns = List("Editorial_GuardianTodayUK_Weekend", "Editorial_GuardianTodayUK_Weekdays")
 
   val attributeToNewsletterMapping: Map[String, String] = Map(
     "TodayUk_Subscribe_Email" -> "Editorial_GuardianTodayUK",

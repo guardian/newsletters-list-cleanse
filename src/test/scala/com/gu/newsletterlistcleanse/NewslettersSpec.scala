@@ -27,16 +27,16 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "ignore newsletters if not enough newsletters have been sent yet to start cleansing" in {
-    val listOfSentDates = Range(0, 94).toList.map { dateOffset =>
+    val listOfSentDates = Range(0, 93).toList.map { dateOffset =>
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
-    listOfSentDates.length should be(94)
+    listOfSentDates.length should be(93)
     val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
     result should be(Nil)
   }
 
   it should "pick the 94th date of the campaignSentDate" in {
-    val listOfSentDates = Range(0, 95).toList.map { dateOffset =>
+    val listOfSentDates = Range(0, 94).toList.map { dateOffset =>
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
     val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
@@ -44,7 +44,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "ignore a newsletter that hasn't got a cleansing policy yet" in {
-    val listOfSentDates = Range(0, 95).toList.map { dateOffset =>
+    val listOfSentDates = Range(0, 94).toList.map { dateOffset =>
       aCampaignSentDate.copy(
         campaignName = "I_DONT_EXIST",
         timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset)
@@ -59,7 +59,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
     val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
-    result.head.cutOffDate should be(aDate.plusDays(999 - 94))
+    result.head.cutOffDate should be(aDate.plusDays(1000 - 94))
   }
 
   it should "pick the 94th date of the campaignSentDate, regardless of the order of the rows returned by the DB" in {
@@ -67,7 +67,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
     val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
-    result.head.cutOffDate should be(aDate.plusDays(999 - 94))
+    result.head.cutOffDate should be(aDate.plusDays(1000 - 94))
   }
 
   it should "compute no matter how many campaigns are being sent" in {
@@ -81,8 +81,8 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
       )
     }
     val result = newsletters.computeCutOffDates(listOfSentDates1 ++ listOfSentDates2, aListLength)
-    result.head.cutOffDate should be(aDate.plusDays(999 - 94))
-    result(1).cutOffDate should be(aDate.plusDays(999 - 61))
+    result.head.cutOffDate should be(aDate.plusDays(1000 - 94))
+    result(1).cutOffDate should be(aDate.plusDays(1000 - 61))
   }
 
 }

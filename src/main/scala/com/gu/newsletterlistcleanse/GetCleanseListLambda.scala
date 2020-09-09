@@ -44,13 +44,21 @@ class GetCleanseListLambda {
     AwsSQSSend.sendMessage(sqsClient, config.cleanseListSqsUrl, Payload(cleanseList.asJson.noSpaces))
   }
 
+  def fetchCampaignCleanseList(campaignCutOff: NewsletterCutOff): List[String] = {
+    if (campaignCutOff.newsletterName == Newsletters.guardianTodayUK) {
+      databaseOperations.fetchGuardianTodayUKCleanseList(campaignCutOff).map(_.userId)
+    } else {
+      databaseOperations.fetchCampaignCleanseList(campaignCutOff).map(_.userId)
+    }
+  }
+
   def process(campaignCutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]]  = {
     val env = Env()
     logger.info(s"Starting $env")
 
     val results = for {
       campaignCutOff <- campaignCutOffDates
-      userIds = databaseOperations.fetchCampaignCleanseList(campaignCutOff).map(_.userId)
+      userIds = fetchCampaignCleanseList(campaignCutOff)
       cleanseList = CleanseList(
         campaignCutOff.newsletterName,
         userIds
@@ -71,7 +79,7 @@ class GetCleanseListLambda {
 
 object TestGetCleanseList {
   def main(args: Array[String]): Unit = {
-    val json = """{"newsletterName":"Editorial_AnimalsFarmed","cutOffDate":"2020-01-21T11:31:14Z[Europe/London]"}"""
+    val json = """{"newsletterName":"Editorial_GuardianTodayUK","cutOffDate":"2020-06-07T11:31:14Z[Europe/London]", "activeListLength": 1000}"""
     val parsedJson = decode[NewsletterCutOff](json).right.get
     val getCleanseListLambda = new GetCleanseListLambda
     Await.result(getCleanseListLambda.process(List(parsedJson)), getCleanseListLambda.timeout)

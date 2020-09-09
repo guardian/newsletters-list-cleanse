@@ -57,7 +57,10 @@ class GetCutOffDatesLambda {
     val newslettersToProcess = lambdaInput.newslettersToProcess.getOrElse(newsletters.allNewsletters)
     val listLengths = databaseOperations.fetchCampaignActiveListLength(newslettersToProcess)
     val campaignSentDates = databaseOperations.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
-    val cutOffDates = newsletters.computeCutOffDates(campaignSentDates, listLengths)
+    val guardianTodayUKSentDates = if (newslettersToProcess.contains(Newsletters.guardianTodayUK)) {
+      databaseOperations.fetchGuardianTodayUKSentDates(Newsletters.maxCutOffPeriod)
+    } else Nil
+    val cutOffDates = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
     logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
     sendCutOffs(cutOffDates)
   }
