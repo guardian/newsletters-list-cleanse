@@ -9,6 +9,8 @@ trait DatabaseOperations {
 
   def fetchCampaignCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID]
 
+  def fetchGuardianTodayUKCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID]
+
   def fetchCampaignActiveListLength(newsletterNames: List[String]): List[ActiveListLength]
 }
 

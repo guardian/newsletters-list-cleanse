@@ -144,6 +144,42 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
     }
   }
 
+  override def fetchGuardianTodayUKCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID] = {
+    val sql = """SELECT DISTINCT users.external_id.id AS user_id
+                |FROM
+                |  `datalake.braze_email_send` as send,
+                |  `datalake.braze_users` as users
+                |WHERE
+                |NOT exists (
+                |  SELECT 1
+                |  FROM `datalake.braze_email_open` AS open
+                |  WHERE
+                |    send.user_id = open.user_id
+                |    AND open.campaign_name = send.campaign_name
+                |    AND open.event_date >= DATE(@formattedDate)
+                |) AND exists (
+                |  SELECT 1
+                |  FROM `datalake.braze_newsletter_membership` AS membership
+                |  WHERE
+                |  send.identity_id = membership.identity_id
+                |  AND membership.newsletter_name = @campaignName
+                |  AND membership.customer_status = 'active'
+                |)
+                |AND send.campaign_name in UNNEST(@campaignNames)
+                |AND send.identity_id = users.identity_id
+                |AND send.event_date >= DATE(@formattedDate)""".stripMargin
+
+    val params = Map(
+      "campaignName" -> QueryParameterValue.string(newsletterCutOff.newsletterName),
+      "campaignNames" -> QueryParameterValue.array(Newsletters.guardianTodayUKCampaigns.toArray, classOf[String]),
+      "formattedDate" -> QueryParameterValue.timestamp(toBigQueryTimestamp(newsletterCutOff.cutOffDate))
+    )
+
+    selectData(sql, params) { result =>
+      UserID(result.get("user_id").getStringValue)
+    }
+  }
+
   override def fetchCampaignActiveListLength(newsletterNames: List[String]): List[ActiveListLength] = {
     val sql = """SELECT newsletter_name,
                  |         count(identity_id) AS listLength

@@ -63,6 +63,8 @@ class AthenaOperations extends DatabaseOperations {
     }
   }
 
+  override def fetchGuardianTodayUKCleanseList(newsletterCutOff: NewsletterCutOff): List[UserID] = ???
+
   override def fetchCampaignActiveListLength(newsletterNames: List[String]): List[ActiveListLength] = {
     DB.athena { implicit session =>
       sql"""SELECT newsletter_name,
