@@ -63,13 +63,18 @@ class UpdateBrazeUsersLambda {
     Future.sequence(allInvalidUserTasks).map(invalidUsers => invalidUsers.toEitherList.map(_.flatten))
   }
 
-  private def updateUsers(userIds: List[String], identityNewsletter: EmailNewsletter) = {
+  private def updateUsers(userIds: List[String], identityNewsletter: EmailNewsletter): Future[Either[BrazeError, SimpleBrazeResponse]] = {
     val timestamp: Instant = Instant.now()
     val requests = for {
       userId <- userIds
     } yield BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
 
-    brazeClient.updateUser(config.brazeApiToken, UserTrackRequest(requests, timestamp))
+    if (!config.dryRun) {
+      brazeClient.updateUser(config.brazeApiToken, UserTrackRequest(requests, timestamp))
+    } else {
+      logger.info(s"Dry-run: Would have updated a batch of ${userIds.length} users")
+      Future.successful(Right(SimpleBrazeResponse("success")))
+    }
   }
 
   private def sendBrazeUpdates(cleanseLists: List[CleanseList], allInvalidUsers: Set[String]): Future[Either[List[BrazeError], List[SimpleBrazeResponse]]] = {
@@ -90,6 +95,7 @@ class UpdateBrazeUsersLambda {
 
   def getBrazeResults(cleanseLists: List[CleanseList]): Future[Either[List[BrazeError], List[SimpleBrazeResponse]]] = {
     logger.info(s"Processing ${cleanseLists.map(_.newsletterName).mkString(", ")}")
+    if (config.dryRun) logger.info("Running in dry-run mode, won't update Braze")
     getAllInvalidUsers(cleanseLists)
       .flatMap {
         case Left(e) => Future.successful(Left(e))
