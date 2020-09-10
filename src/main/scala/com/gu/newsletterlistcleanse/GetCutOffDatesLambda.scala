@@ -71,5 +71,6 @@ object TestGetCutOffDates {
     val getCutOffDatesLambda = new GetCutOffDatesLambda()
     val lambdaInput = GetCutOffDatesLambdaInput(Some(List("Editorial_AnimalsFarmed", "Editorial_TheLongRead")))
     Await.result(getCutOffDatesLambda.process(lambdaInput), getCutOffDatesLambda.timeout)
+    getCutOffDatesLambda.sqsClient.shutdown()
   }
 }
