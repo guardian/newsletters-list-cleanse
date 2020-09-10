@@ -12,7 +12,8 @@ case class NewsletterConfig(
   cutOffSqsUrl: String,
   cleanseListSqsUrl: String,
   archiveFilterSet: Set[String],
-  dryRun: Boolean
+  dryRun: Boolean,
+  backupBucketName: String
 )
 
 object NewsletterConfig {
@@ -28,7 +29,8 @@ object NewsletterConfig {
       cutOffSqsUrl = config.getString("cutOffSqsUrl"),
       cleanseListSqsUrl = config.getString("cleanseListSqsUrl"),
       archiveFilterSet = config.getStringList("archiveFilterList").asScala.toSet,
-      dryRun = if (config.hasPathOrNull("dryRun")) config.getBoolean("dryRun") else true
+      dryRun = if (config.hasPathOrNull("dryRun")) config.getBoolean("dryRun") else true,
+      backupBucketName = config.getString("backupBucketName")
     )
   }
 }

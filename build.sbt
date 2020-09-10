@@ -29,6 +29,7 @@ libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-lambda-java-events" % "2.2.9",
   "com.amazonaws" % "aws-lambda-java-log4j2" % "1.2.0",
   "com.amazonaws" % "aws-java-sdk-sqs" % "1.11.842",
+  "com.amazonaws" % "aws-java-sdk-s3" % "1.11.842",
   "org.apache.logging.log4j" % "log4j-slf4j-impl" % "2.13.3",
   "org.slf4j" % "slf4j-api" % "1.7.30",
   "com.google.cloud" % "google-cloud-bigquery" % "1.116.10",
