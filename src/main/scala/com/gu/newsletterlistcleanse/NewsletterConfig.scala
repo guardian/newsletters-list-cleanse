@@ -3,13 +3,15 @@ package com.gu.newsletterlistcleanse
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.gu.{AppIdentity, AwsIdentity}
 import com.gu.conf.{ConfigurationLoader, SSMConfigurationLocation}
+import scala.collection.JavaConverters._
 
 case class NewsletterConfig(
   serviceAccount: String,
   projectId: String,
   brazeApiToken: String,
   cutOffSqsUrl: String,
-  cleanseListSqsUrl: String
+  cleanseListSqsUrl: String,
+  archiveFilterSet: Set[String]
 )
 
 object NewsletterConfig {
@@ -23,7 +25,8 @@ object NewsletterConfig {
       projectId = config.getString("projectId"),
       brazeApiToken = config.getString("brazeApiToken"),
       cutOffSqsUrl = config.getString("cutOffSqsUrl"),
-      cleanseListSqsUrl = config.getString("cleanseListSqsUrl")
+      cleanseListSqsUrl = config.getString("cleanseListSqsUrl"),
+      archiveFilterSet = config.getStringList("archiveFilterList").asScala.toSet
     )
   }
 }
