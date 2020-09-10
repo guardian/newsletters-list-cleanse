@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-object BrazeClient {
+class BrazeClient {
 
   private val timeout = 5000.seconds
 
