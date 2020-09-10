@@ -16,6 +16,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Try
 
 
 class UpdateBrazeUsersLambda {
@@ -24,6 +25,8 @@ class UpdateBrazeUsersLambda {
   val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
+
+  val brazeClient = new BrazeClient
 
   private val archiveFilterSet = config.archiveFilterSet
 
@@ -48,7 +51,7 @@ class UpdateBrazeUsersLambda {
   }
 
   private def getInvalidUsers(userIds: List[String]): Future[Either[BrazeError, List[String]]] =
-    BrazeClient.getInvalidUsers(config.brazeApiToken, UserExportRequest(userIds))
+    brazeClient.getInvalidUsers(config.brazeApiToken, UserExportRequest(userIds))
 
   private def getAllInvalidUsers(cleanseLists: List[CleanseList]): Future[Either[List[BrazeError], List[String]]] = {
     val allInvalidUserTasks: List[Future[Either[BrazeError, List[String]]]] = for {
@@ -67,7 +70,7 @@ class UpdateBrazeUsersLambda {
     } yield BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
 
     if (!config.dryRun) {
-      BrazeClient.updateUser(config.brazeApiToken, UserTrackRequest(requests, timestamp))
+      brazeClient.updateUser(config.brazeApiToken, UserTrackRequest(requests, timestamp))
     } else {
       logger.info(s"Dry-run: Would have updated a batch of ${userIds.length} users")
       Future.successful(Right(SimpleBrazeResponse("success")))
@@ -106,6 +109,8 @@ object TestUpdateBrazeUsers {
   def main(args: Array[String]): Unit = {
     val cleanseLists = List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb", "mystery_user 1")))
     val updateBrazeUsersLambda = new UpdateBrazeUsersLambda()
-    println(updateBrazeUsersLambda.getBrazeResults(cleanseLists))
+    val result = Try(Await.result(updateBrazeUsersLambda.getBrazeResults(cleanseLists), updateBrazeUsersLambda.timeout))
+    Await.result(updateBrazeUsersLambda.brazeClient.sttpBackend.close(), Duration(15, TimeUnit.SECONDS))
+    println(result)
   }
 }
