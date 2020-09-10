@@ -11,7 +11,8 @@ case class NewsletterConfig(
   brazeApiToken: String,
   cutOffSqsUrl: String,
   cleanseListSqsUrl: String,
-  archiveFilterSet: Set[String]
+  archiveFilterSet: Set[String],
+  dryRun: Boolean
 )
 
 object NewsletterConfig {
@@ -26,7 +27,8 @@ object NewsletterConfig {
       brazeApiToken = config.getString("brazeApiToken"),
       cutOffSqsUrl = config.getString("cutOffSqsUrl"),
       cleanseListSqsUrl = config.getString("cleanseListSqsUrl"),
-      archiveFilterSet = config.getStringList("archiveFilterList").asScala.toSet
+      archiveFilterSet = config.getStringList("archiveFilterList").asScala.toSet,
+      dryRun = if (config.hasPathOrNull("dryRun")) config.getBoolean("dryRun") else true
     )
   }
 }
