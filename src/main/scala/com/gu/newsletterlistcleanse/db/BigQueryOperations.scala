@@ -58,6 +58,7 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                 |    FROM
                 |      `datalake.braze_dispatch`
                 |    WHERE campaign_name IN UNNEST(@campaignNames)
+                |    AND DATE(timestamp) < DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
                 |  )
                 |)
                 |WHERE rn <= @cutOffLength
@@ -88,6 +89,7 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                 |    FROM
                 |      `datalake.braze_dispatch`
                 |    WHERE campaign_name IN UNNEST(@campaignNames)
+                |    AND DATE(timestamp) < DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
                 |  )
                 |)
                 |WHERE rn <= @cutOffLength

@@ -83,5 +83,6 @@ object TestGetCleanseList {
     val parsedJson = decode[NewsletterCutOff](json).right.get
     val getCleanseListLambda = new GetCleanseListLambda
     Await.result(getCleanseListLambda.process(List(parsedJson)), getCleanseListLambda.timeout)
+    getCleanseListLambda.sqsClient.shutdown()
   }
 }
