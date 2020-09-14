@@ -235,7 +235,16 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub newsletter-cleanse-backup-bucket-${Stage}
-      DeletionPolicy: Retain
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+        DeletionPolicy: Retain
       Tags:
         - Key: Stage
           Value: !Ref Stage
@@ -243,18 +252,3 @@ Resources:
           Value: !Ref Stack
         - Key: App
           Value: !Ref App
-
-  CleanseListBackUpBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket:
-        Ref: CleanseListBackUpBucket
-      PolicyDocument:
-        Statement:
-          Action:
-            - s3:GetObject
-            - s3:PutObject
-          Effect: Allow
-          Resource:
-            - !Sub arn:aws:s3:::newsletter-cleanse-backup-bucket-${Stage}
-          Principal: !GetAtt ExecutionRole.Arn
