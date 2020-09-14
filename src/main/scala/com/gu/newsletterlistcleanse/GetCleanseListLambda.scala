@@ -1,16 +1,19 @@
 package com.gu.newsletterlistcleanse
 
+import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
+import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
 import com.gu.newsletterlistcleanse.sqs.{AwsSQSSend, SqsMessageParser}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
-
 import io.circe.parser._
 import io.circe.syntax._
 
@@ -26,15 +29,18 @@ class GetCleanseListLambda {
 
   val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
   val sqsClient: AmazonSQSAsync = AwsSQSSend.buildSqsClient(credentialProvider)
+  val s3Client: AmazonS3 = AmazonS3ClientBuilder.standard
+    .withCredentials(credentialProvider)
+    .withRegion(Regions.EU_WEST_1).build
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
   val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
-  def handler(sqsEvent: SQSEvent): Unit = {
+  def handler(sqsEvent: SQSEvent, context: Context): Unit = {
     SqsMessageParser.parse[NewsletterCutOff](sqsEvent) match {
       case Right(newsletterCutOffs) =>
-        Await.result(process(newsletterCutOffs), timeout)
+        Await.result(process(newsletterCutOffs, Some(context)), timeout)
       case Left(parseErrors) =>
         parseErrors.foreach(e =>logger.error(e.getMessage))
     }
@@ -52,7 +58,16 @@ class GetCleanseListLambda {
     }
   }
 
-  def process(campaignCutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]]  = {
+  def exportCleanseListToS3(cleanseList: CleanseList, env: Env, contextOption: Option[Context]): Unit = {
+    val exportJson = cleanseList.asJson.toString
+    val date = LocalDate.now().toString
+    contextOption.foreach { context =>
+      val key = s"${env.stage}/$date/${cleanseList.newsletterName}.${context.getAwsRequestId}.json"
+      s3Client.putObject(config.backupBucketName, key, exportJson)
+    }
+  }
+
+  def process(campaignCutOffDates: List[NewsletterCutOff], contextOption: Option[Context]): Future[List[SendMessageResult]]  = {
     val env = Env()
     logger.info(s"Starting $env")
 
@@ -63,8 +78,8 @@ class GetCleanseListLambda {
         campaignCutOff.newsletterName,
         userIds
       )
-
       _ = logger.info(s"Found ${userIds.length} users of ${campaignCutOff.activeListLength} to remove from ${campaignCutOff.newsletterName}")
+      _ = exportCleanseListToS3(cleanseList, env, contextOption)
 
       batchedCleanseList = cleanseList.getCleanseListBatches(5000)
       (batch, index) <- batchedCleanseList.zipWithIndex
@@ -82,7 +97,7 @@ object TestGetCleanseList {
     val json = """{"newsletterName":"Editorial_GuardianTodayUK","cutOffDate":"2020-06-07T11:31:14Z[Europe/London]", "activeListLength": 1000}"""
     val parsedJson = decode[NewsletterCutOff](json).right.get
     val getCleanseListLambda = new GetCleanseListLambda
-    Await.result(getCleanseListLambda.process(List(parsedJson)), getCleanseListLambda.timeout)
+    Await.result(getCleanseListLambda.process(List(parsedJson), None), getCleanseListLambda.timeout)
     getCleanseListLambda.sqsClient.shutdown()
   }
 }

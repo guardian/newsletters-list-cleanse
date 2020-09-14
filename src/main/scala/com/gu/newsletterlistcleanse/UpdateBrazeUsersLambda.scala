@@ -67,7 +67,7 @@ class UpdateBrazeUsersLambda {
     val timestamp: Instant = Instant.now()
     val requests = for {
       userId <- userIds
-    } yield BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, false)))
+    } yield BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, config.subscribeUsers)))
 
     if (!config.dryRun) {
       brazeClient.updateUser(config.brazeApiToken, UserTrackRequest(requests, timestamp))
