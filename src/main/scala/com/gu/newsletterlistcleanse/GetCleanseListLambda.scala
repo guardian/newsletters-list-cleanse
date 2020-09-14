@@ -40,7 +40,7 @@ class GetCleanseListLambda {
   def handler(sqsEvent: SQSEvent, context: Context): Unit = {
     SqsMessageParser.parse[NewsletterCutOff](sqsEvent) match {
       case Right(newsletterCutOffs) =>
-        Await.result(process(newsletterCutOffs, context), timeout)
+        Await.result(process(newsletterCutOffs, Some(context)), timeout)
       case Left(parseErrors) =>
         parseErrors.foreach(e =>logger.error(e.getMessage))
     }
@@ -58,14 +58,16 @@ class GetCleanseListLambda {
     }
   }
 
-  def exportCleanseListToS3(cleanseList: CleanseList, env: Env, context: Context): Unit = {
+  def exportCleanseListToS3(cleanseList: CleanseList, env: Env, contextOption: Option[Context]): Unit = {
     val exportJson = cleanseList.asJson.toString
     val date = LocalDate.now().toString
-    val key =  s"${env.stage}/$date/${cleanseList.newsletterName}.${context.getAwsRequestId}.json"
-    s3Client.putObject(config.backupBucketName, key, exportJson)
+    contextOption.foreach { context =>
+      val key = s"${env.stage}/$date/${cleanseList.newsletterName}.${context.getAwsRequestId}.json"
+      s3Client.putObject(config.backupBucketName, key, exportJson)
+    }
   }
 
-  def process(campaignCutOffDates: List[NewsletterCutOff], context: Context): Future[List[SendMessageResult]]  = {
+  def process(campaignCutOffDates: List[NewsletterCutOff], contextOption: Option[Context]): Future[List[SendMessageResult]]  = {
     val env = Env()
     logger.info(s"Starting $env")
 
@@ -77,7 +79,7 @@ class GetCleanseListLambda {
         userIds
       )
       _ = logger.info(s"Found ${userIds.length} users of ${campaignCutOff.activeListLength} to remove from ${campaignCutOff.newsletterName}")
-      _ = exportCleanseListToS3(cleanseList, env, context)
+      _ = exportCleanseListToS3(cleanseList, env, contextOption)
 
       batchedCleanseList = cleanseList.getCleanseListBatches(5000)
       (batch, index) <- batchedCleanseList.zipWithIndex
@@ -95,8 +97,7 @@ object TestGetCleanseList {
     val json = """{"newsletterName":"Editorial_GuardianTodayUK","cutOffDate":"2020-06-07T11:31:14Z[Europe/London]", "activeListLength": 1000}"""
     val parsedJson = decode[NewsletterCutOff](json).right.get
     val getCleanseListLambda = new GetCleanseListLambda
-    Await.result(getCleanseListLambda.process(List(parsedJson)), getCleanseListLambda.timeout)
+    Await.result(getCleanseListLambda.process(List(parsedJson), None), getCleanseListLambda.timeout)
     getCleanseListLambda.sqsClient.shutdown()
-
   }
 }
