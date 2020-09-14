@@ -230,25 +230,3 @@ Resources:
       FunctionName: !GetAtt GetCutOffDatesLambda.Arn
       Principal: events.amazonaws.com
       SourceArn: !GetAtt DailyEvent.Arn
-
-  CleanseListBackUpBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub newsletter-cleanse-backup-bucket-${Stage}
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-        DeletionPolicy: Retain
-      Tags:
-        - Key: Stage
-          Value: !Ref Stage
-        - Key: Stack
-          Value: !Ref Stack
-        - Key: App
-          Value: !Ref App
