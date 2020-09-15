@@ -101,7 +101,7 @@ Resources:
       MemorySize: 1024
       Role: !GetAtt ExecutionRole.Arn
       Runtime: java8
-      Timeout: 60
+      Timeout: 120
 
   NewsletterCutOffDateQueue:
     Type: AWS::SQS::Queue
@@ -161,7 +161,7 @@ Resources:
       MemorySize: 1024
       Role: !GetAtt ExecutionRole.Arn
       Runtime: java8
-      Timeout: 60
+      Timeout: 600
 
   CleanseListQueue:
     Type: AWS::SQS::Queue
@@ -221,7 +221,7 @@ Resources:
       MemorySize: 1024
       Role: !GetAtt ExecutionRole.Arn
       Runtime: java8
-      Timeout: 60
+      Timeout: 600
 
   DailyEvent:
     Type: AWS::Events::Rule
