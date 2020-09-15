@@ -200,7 +200,7 @@ Resources:
     Properties:
       BatchSize: 1
       Enabled: True
-      EventSourceArn: !GetAtt NewsletterCutOffDateQueue.Arn
+      EventSourceArn: !GetAtt CleanseListQueue.Arn
       FunctionName: !Sub newsletter-cleanse-update-braze-users-${Stage}
 
   UpdateBrazeUsersLambda:
