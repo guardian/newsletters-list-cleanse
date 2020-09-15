@@ -21,6 +21,9 @@ Parameters:
     Description: Bucket where RiffRaff uploads artifacts on deploy
     Type: String
     Default: identity-lambda
+  BackupBucket:
+    Description: Bucket where we temporarily store which users are removed from the mailing list
+    Type: String
 
 Resources:
   ExecutionRole:
@@ -72,6 +75,13 @@ Resources:
               Action:
                 - ssm:GetParametersByPath
               Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${Stack}/${App}/${Stage}
+        - PolicyName: s3
+          PolicyDocument:
+            Statement:
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: !Sub arn:aws:s3:::!{BackupBucket}/*
 
   GetCutOffDatesLambda:
     Type: AWS::Lambda::Function
