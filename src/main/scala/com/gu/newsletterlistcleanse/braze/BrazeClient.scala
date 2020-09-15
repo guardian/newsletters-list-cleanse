@@ -33,7 +33,9 @@ class BrazeClient {
     val results = block
 
     results.foreach {
-      case Right(successResult) => logger.info(s"BrazeClient success: $info $successResult")
+      case Right(successResult) =>
+        logger.info(s"BrazeClient success: $info")
+        logger.debug(s"BrazeClient result: $successResult")
       case Left(errorResult) => logger.error(s"BrazeClient failure: $info $errorResult")
     }
 
