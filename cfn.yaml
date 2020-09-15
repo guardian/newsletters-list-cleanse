@@ -107,7 +107,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub newsletter-newsletter-cut-off-date-${Stage}
-      VisibilityTimeout: 100
+      VisibilityTimeout: 600
       MessageRetentionPeriod: 3600 # 1 hour
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt NewsletterCutOffDateDlq.Arn
@@ -167,7 +167,7 @@ Resources:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: !Sub newsletter-cleanse-list-${Stage}
-      VisibilityTimeout: 100
+      VisibilityTimeout: 600
       MessageRetentionPeriod: 3600 # 1 hour
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt CleanseListDlq.Arn
