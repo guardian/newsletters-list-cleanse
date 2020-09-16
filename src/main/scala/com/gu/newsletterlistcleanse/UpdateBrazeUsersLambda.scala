@@ -94,7 +94,9 @@ class UpdateBrazeUsersLambda {
   }
 
   def getBrazeResults(cleanseLists: List[CleanseList]): Future[Either[List[BrazeError], List[SimpleBrazeResponse]]] = {
-    logger.info(s"Processing ${cleanseLists.map(_.newsletterName).mkString(", ")}")
+    val newsletterList = cleanseLists.map(_.newsletterName).mkString(", ")
+    val totalUsers = cleanseLists.map(_.userIdList.length).sum
+    logger.info(s"Processing $newsletterList, total of $totalUsers users to update")
     if (config.dryRun) logger.info("Running in dry-run mode, won't update Braze")
     getAllInvalidUsers(cleanseLists)
       .flatMap {
