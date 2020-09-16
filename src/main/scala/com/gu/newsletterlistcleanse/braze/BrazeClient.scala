@@ -55,6 +55,7 @@ class BrazeClient {
 
     response.body match {
       case Left(requestError) =>
+        logger.error(s"Got HTTP ${response.code.code} from Braze", requestError)
         Left(BrazeError(response.code.code, requestError))
       case Right(body) =>
         parseResponse[T](body, response.code.code)
@@ -89,12 +90,10 @@ class BrazeClient {
         .send()
 
 
-      response.map(parseValidateResponse[ExportIdBrazeResponse]).map(parsedResponse =>
-        parsedResponse match {
-          case Left(error) => Left(error)
-          case Right(validResponse) => Right(validResponse.invalidUserIds)
-        }
-      )
+      response.map(parseValidateResponse[ExportIdBrazeResponse]).map {
+        case Left(error) => Left(error)
+        case Right(validResponse) => Right(validResponse.invalidUserIds.getOrElse(Nil))
+      }
     }
 
   }
