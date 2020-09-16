@@ -21,7 +21,7 @@ object SimpleBrazeResponse {
   implicit val simpleBrazeResponseDecoder: Decoder[SimpleBrazeResponse] = deriveDecoder
 }
 
-case class ExportIdBrazeResponse(message: String, invalidUserIds: List[String],
+case class ExportIdBrazeResponse(message: String, invalidUserIds: Option[List[String]],
                                  users: List[Map[String,String]]) extends BrazeResponse {
   override def isSuccessful: Boolean = message == "success" || message == "queued"
 }
