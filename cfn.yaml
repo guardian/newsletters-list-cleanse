@@ -227,7 +227,7 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Description: Event sent to process the previous day of data
-      ScheduleExpression: cron(14 3 * * ? *)
+      ScheduleExpression: cron(15 10 ? 1/1 TUE#1 *)
       State: DISABLED
       Targets:
         - Id: Lambda
