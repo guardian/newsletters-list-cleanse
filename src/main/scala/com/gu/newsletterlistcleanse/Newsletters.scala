@@ -8,13 +8,7 @@ import com.gu.newsletterlistcleanse.db.{ActiveListLength, CampaignSentDate}
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 
 class Newsletters {
-  def allNewsletters: List[String] = {
-    EmailNewsletters.allNewsletters.map { newsletter =>
-      val attr = newsletter.brazeSubscribeAttributeName
-      val newsletterName = Newsletters.attributeToNewsletterMapping(attr)
-      newsletterName
-    }
-  }
+  def allNewsletters: List[String] = EmailNewsletters.allNewsletters.map(_.brazeNewsletterName)
 
   private val reverseChrono: Ordering[ZonedDateTime] = (x: ZonedDateTime, y: ZonedDateTime) => y.compareTo(x)
 
@@ -95,60 +89,6 @@ object Newsletters {
   val guardianTodayUK = "Editorial_GuardianTodayUK"
   val guardianTodayUKCampaigns = List("Editorial_GuardianTodayUK_Weekend", "Editorial_GuardianTodayUK_Weekdays")
 
-  val attributeToNewsletterMapping: Map[String, String] = Map(
-    "TodayUk_Subscribe_Email" -> "Editorial_GuardianTodayUK",
-    "TodayUs_Subscribe_Email" -> "Editorial_GuardianTodayUS",
-    "TodayAus_Subscribe_Email" -> "Editorial_GuardianTodayAUS",
-    "MorningBriefingUk_Subscribe_Email" -> "Editorial_MorningBriefingUK",
-    "MorningBriefingUs_Subscribe_Email" -> "Editorial_USMorningBriefing",
-    "MorningMailAus_Subscribe_Email" -> "Editorial_MorningMailAUS",
-    "CoronavirusAustraliaAtAGlance_Subscribe_Email" -> "Editorial_CoronavirusAustraliaAtAGlance",
-    "GlobalDispatch_Subscribe_Email" -> "Editorial_GlobalDispatch",
-    "TheUsPoliticsMinute_Subscribe_Email" -> "Editorial_TheUSPoliticsMinute",
-    "AustralianPolitics_Subscribe_Email" -> "Editorial_AustralianPolitics",
-    "BusinessToday_Subscribe_Email" -> "Editorial_BusinessToday",
-    "GreenLight_Subscribe_Email" -> "Editorial_GreenLight",
-    "LabNotes_Subscribe_Email" -> "Editorial_LabNotes",
-    "GuardianDocumentaries_Subscribe_Email" -> "Editorial_GuardianDocumentaries",
-    "TheLongRead_Subscribe_Email" -> "Editorial_TheLongRead",
-    "AnimalsFarmed_Subscribe_Email" -> "Editorial_AnimalsFarmed",
-    "GunsAndLiesInAmerica_Subscribe_Email" -> "Editorial_GunsAndLiesInAmerica",
-    "TheUpside_Subscribe_Email" -> "Editorial_TheUpside",
-    "ThisLandIsYourLand_Subscribe_Email" -> "Editorial_ThisLandIsYourLand",
-    "TheRecap_Subscribe_Email" -> "Editorial_TheRecap",
-    "TheFiver_Subscribe_Email" -> "Editorial_TheFiver",
-    "TheBreakdown_Subscribe_Email" -> "Editorial_TheBreakdown",
-    "TheSpin_Subscribe_Email" -> "Editorial_TheSpin",
-    "GuardianAustraliaSports_Subscribe_Email" -> "Editorial_GuardianAustraliaSports",
-    "SleeveNotes_Subscribe_Email" -> "Editorial_SleeveNotes",
-    "FilmToday_Subscribe_Email" -> "Editorial_FilmToday",
-    "Bookmarks_Subscribe_Email" -> "Editorial_Bookmarks",
-    "ArtWeekly_Subscribe_Email" -> "Editorial_ArtWeekly",
-    "HearHere_Subscribe_Email" -> "Editorial_HearHere",
-    "TheFlyer_Subscribe_Email" -> "Editorial_TheFlyer",
-    "FashionStatement_Subscribe_Email" -> "Editorial_FashionStatement",
-    "TheGuideStayingIn_Subscribe_Email" -> "Editorial_TheGuideStayingIn",
-    "SavedForLater_Subscribe_Email" -> "Editorial_SavedForLater",
-    "WordOfMouth_Subscribe_Email" -> "Editorial_WordOfMouth",
-    "BestOfGuardianOpinionUK_Subscribe_Email" -> "Editorial_BestOfGuardianOpinionUK",
-    "ThisIsEurope_Subscribe_Email" -> "Editorial_ThisIsEurope",
-    "BestOfGuardianOpinionUS_Subscribe_Email" -> "Editorial_BestOfGuardianOpinionUS",
-    "TheWeekInPatriarchy_Subscribe_Email" -> "Editorial_TheWeekInPatriarchy",
-    "BestOfGuardianOpinionAus_Subscribe_Email" -> "Editorial_BestOfGuardianOpinionAUS",
-    "FirstDogOnTheMoon_Subscribe_Email" -> "Editorial_FirstDogOnTheMoon",
-    "BusinessView_Subscribe_Email" -> "Editorial_BusinessView",
-    "GuardianStudentsNetwork_Subscribe_Email" -> "Editorial_GuardianStudentsNetwork",
-    "GuardianUniversities_Subscribe_Email" -> "Editorial_GuardianUniversities",
-    "SocietyWeekly_Subscribe_Email" -> "Editorial_SocietyWeekly",
-    "TeacherNetwork_Subscribe_Email" -> "Editorial_TeacherNetwork",
-    "TheWeekendPapers_Subscribe_Email" -> "Editorial_WeekendPapers",
-    "TheObserverFoodMonthly_Subscribe_Email" -> "Editorial_OFM",
-    "FrontPageNewsletter_Subscribe_Email" -> "MK_FrontPage"
-  )
-
-  val newsletterToAttribute: Map[String, String] = attributeToNewsletterMapping.map(_.swap)
-
   def getIdentityNewsletterFromName(newsletterName: String): Option[EmailNewsletter] =
-    Option(Newsletters.newsletterToAttribute(newsletterName)).flatMap(
-      name => EmailNewsletters.frombrazeSubscribeAttributeName(name))
+    EmailNewsletters.allNewsletters.find(_.brazeNewsletterName == newsletterName)
 }
