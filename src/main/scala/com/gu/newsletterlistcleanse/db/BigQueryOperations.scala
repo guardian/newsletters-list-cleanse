@@ -130,6 +130,7 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                 |  WHERE
                 |  send.identity_id = membership.identity_id
                 |  AND send.campaign_name = membership.newsletter_name
+                |  AND DATE(membership.joined_timestamp) < DATE(@formattedDate)
                 |  AND membership.customer_status = 'active'
                 |)
                 |AND send.campaign_name = @campaignName
@@ -165,6 +166,7 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                 |  WHERE
                 |  send.identity_id = membership.identity_id
                 |  AND membership.newsletter_name = @campaignName
+                |  AND DATE(membership.joined_timestamp) < DATE(@formattedDate)
                 |  AND membership.customer_status = 'active'
                 |)
                 |AND send.campaign_name in UNNEST(@campaignNames)
