@@ -158,7 +158,7 @@ class BigQueryOperations(serviceAccount: String, projectId: String) extends Data
                 |  FROM `datalake.braze_email_open` AS open
                 |  WHERE
                 |    send.user_id = open.user_id
-                |    AND open.campaign_name = send.campaign_name
+                |    AND open.campaign_name in UNNEST(@campaignNames)
                 |    AND open.event_date >= DATE(@formattedDate)
                 |) AND exists (
                 |  SELECT 1
