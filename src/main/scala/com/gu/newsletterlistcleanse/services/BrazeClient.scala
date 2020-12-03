@@ -3,13 +3,10 @@ package com.gu.newsletterlistcleanse.services
 import io.circe.Decoder
 import org.slf4j.{Logger, LoggerFactory}
 import sttp.client._
-import sttp.client.asynchttpclient.future.AsyncHttpClientFutureBackend
 
 import scala.concurrent.duration._
 import io.circe.parser.decode
 import io.circe.syntax._
-import org.asynchttpclient.DefaultAsyncHttpClientConfig
-import org.asynchttpclient.filter.ThrottleRequestFilter
 import sttp.client.asynchttpclient.WebSocketHandler
 
 import scala.concurrent.Future
@@ -18,14 +15,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class BrazeClient {
 
-  private val timeout = 5000.seconds
-  private val concurrencyLimit = 3
+  val timeout: FiniteDuration = 5000.seconds
 
-  private val sttpOptions = SttpBackendOptions.connectionTimeout(timeout)
-  private val adjustFunction: DefaultAsyncHttpClientConfig.Builder => DefaultAsyncHttpClientConfig.Builder =
-    (defaultConfig) => defaultConfig.addRequestFilter(new ThrottleRequestFilter(concurrencyLimit)).setMaxConnections(concurrencyLimit)
-  implicit val sttpBackend: SttpBackend[Future, Nothing, WebSocketHandler] = AsyncHttpClientFutureBackend
-    .usingConfigBuilder(adjustFunction, sttpOptions)
+  implicit val sttpBackend: SttpBackend[Future, Nothing, WebSocketHandler] = SttpFactory.createSttpBackend()
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
   val brazeEndpoint = "https://rest.fra-01.braze.eu"
