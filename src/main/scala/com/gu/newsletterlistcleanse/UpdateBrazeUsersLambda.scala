@@ -7,7 +7,7 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.gu.newsletterlistcleanse.EitherConverter.EitherList
 import com.gu.newsletterlistcleanse.Newsletters.getIdentityNewsletterFromName
-import com.gu.newsletterlistcleanse.braze.{BrazeClient, BrazeError, BrazeNewsletterSubscriptionsUpdate, SimpleBrazeResponse, UserExportRequest, UserTrackRequest}
+import com.gu.newsletterlistcleanse.services.{BrazeClient, BrazeError, BrazeNewsletterSubscriptionsUpdate, SimpleBrazeResponse, UserExportRequest, UserTrackRequest}
 import com.gu.newsletterlistcleanse.models.CleanseList
 import com.gu.identity.model.EmailNewsletter
 import com.gu.newsletterlistcleanse.sqs.SqsMessageParser

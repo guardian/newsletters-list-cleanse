@@ -1,4 +1,4 @@
-package com.gu.newsletterlistcleanse.braze
+package com.gu.newsletterlistcleanse.services
 
 import io.circe.Decoder
 import org.slf4j.{Logger, LoggerFactory}
