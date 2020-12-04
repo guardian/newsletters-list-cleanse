@@ -12,6 +12,7 @@ import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff}
+import com.gu.newsletterlistcleanse.services.Newsletters
 import com.gu.newsletterlistcleanse.sqs.{AwsSQSSend, SqsMessageParser}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import io.circe.parser._
