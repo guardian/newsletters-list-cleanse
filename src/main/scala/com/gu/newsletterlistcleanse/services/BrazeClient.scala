@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class BrazeClient {
 
-  val timeout: FiniteDuration = 5000.seconds
+  val timeout: FiniteDuration = 5.seconds
 
   implicit val sttpBackend: SttpBackend[Future, Nothing, WebSocketHandler] = SttpFactory.createSttpBackend()
 
