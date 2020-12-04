@@ -8,6 +8,7 @@ import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
+import com.gu.newsletterlistcleanse.services.Newsletters
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import org.slf4j.{Logger, LoggerFactory}
@@ -55,7 +56,7 @@ class GetCutOffDatesLambda {
     val env = Env()
     logger.info(s"Starting $env")
     val newslettersToProcess = if (lambdaInput.newslettersToProcess.nonEmpty) {
-      lambdaInput.newslettersToProcess.toList
+      Future.successful(lambdaInput.newslettersToProcess.toList)
     } else {
       newsletters.allNewsletters
     }
