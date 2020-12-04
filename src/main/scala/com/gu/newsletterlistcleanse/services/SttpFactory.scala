@@ -12,7 +12,7 @@ import scala.concurrent.duration.FiniteDuration
 
 object SttpFactory {
 
-  def createSttpBackend(timeout: FiniteDuration = 5000.seconds, concurrencyLimit: Int = 3): SttpBackend[Future, Nothing, WebSocketHandler] = {
+  def createSttpBackend(timeout: FiniteDuration = 5.seconds, concurrencyLimit: Int = 3): SttpBackend[Future, Nothing, WebSocketHandler] = {
 
     val sttpOptions = SttpBackendOptions.connectionTimeout(timeout)
     val adjustFunction: DefaultAsyncHttpClientConfig.Builder => DefaultAsyncHttpClientConfig.Builder =
