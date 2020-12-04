@@ -20,6 +20,7 @@ import scala.beans.BeanProperty
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 case class GetCutOffDatesLambdaInput(
   @BeanProperty
@@ -43,11 +44,16 @@ class GetCutOffDatesLambda {
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
   def handler(lambdaInput: GetCutOffDatesLambdaInput, context: Context): Unit = {
-    val result = Await.result(process(lambdaInput).value, timeout)
+    val result = Try(Await.result(process(lambdaInput).value, timeout))
 
     result match {
-      case Right(results) => logger.info(s"Sent ${results.length} messages to SQS")
-      case Left(error) => throw new RuntimeException(s"An error has occurred during the execution of the function: $error")
+      case Success(Right(results)) => logger.info(s"Sent ${results.length} messages to SQS")
+      case Success(Left(error)) =>
+        logger.error(s"An error has occurred during the execution of the function: $error")
+        throw new RuntimeException(s"An error has occurred during the execution of the function: $error")
+      case Failure(exception) =>
+        logger.error(s"An error has occurred during the execution of the function", exception)
+        throw exception
     }
   }
 
@@ -91,8 +97,18 @@ class GetCutOffDatesLambda {
 object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
     val getCutOffDatesLambda = new GetCutOffDatesLambda()
-    val lambdaInput = GetCutOffDatesLambdaInput(Array("Editorial_AnimalsFarmed", "Editorial_TheLongRead"))
-    Await.result(getCutOffDatesLambda.process(lambdaInput).value, getCutOffDatesLambda.timeout)
+    val lambdaInput = GetCutOffDatesLambdaInput(Array.empty)
+    val result = Try(Await.result(getCutOffDatesLambda.process(lambdaInput).value, getCutOffDatesLambda.timeout))
+
+    result match {
+      case Success(Right(results)) => println(s"Sent ${results.length} messages to SQS")
+      case Success(Left(error)) =>
+        println(s"An error has occurred during the execution of the function: $error")
+        throw new RuntimeException(s"An error has occurred during the execution of the function: $error")
+      case Failure(exception) =>
+        println(s"An error has occurred during the execution of the function", exception)
+        throw exception
+    }
     getCutOffDatesLambda.sqsClient.shutdown()
   }
 }

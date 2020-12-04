@@ -40,6 +40,11 @@ class Newsletters {
       }
     }
 
+    def handleNon200(response: Response[Either[String, String]]): Either[String, String] = response.body match {
+      case Right(body) if (response.code.isSuccess) => Right(body)
+      case _ => Left(s"${response.code.code}: ${response.statusText}")
+    }
+
     val response = basicRequest
       .get(uri"https://idapi.theguardian.com/newsletters")
       .header("Origin", "https://www.theguardian.com")
@@ -47,7 +52,7 @@ class Newsletters {
       .send()
 
     for {
-      body <- EitherT(response.map(_.body))
+      body <- EitherT(response.map(handleNon200))
       parsedBody <- EitherT.fromEither[Future](parseBody(body))
     } yield parsedBody
   }
