@@ -8,7 +8,7 @@ import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import com.google.cloud.bigquery.{BigQuery, BigQueryOptions, FieldValueList, QueryJobConfiguration, QueryParameterValue}
 import com.google.auth.Credentials
 import com.google.auth.oauth2.ServiceAccountCredentials
-import com.gu.newsletterlistcleanse.Newsletters
+import com.gu.newsletterlistcleanse.services.Newsletters
 
 import scala.collection.JavaConverters._
 

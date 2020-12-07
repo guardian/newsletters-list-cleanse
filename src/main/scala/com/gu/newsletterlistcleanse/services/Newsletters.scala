@@ -1,14 +1,61 @@
-package com.gu.newsletterlistcleanse
+package com.gu.newsletterlistcleanse.services
 
 import java.time.ZonedDateTime
 
+import cats.implicits._
+import cats.data.EitherT
 import com.gu.identity.model.{EmailNewsletter, EmailNewsletters}
 import com.gu.newsletterlistcleanse.db.ActiveListLength.getActiveListLength
 import com.gu.newsletterlistcleanse.db.{ActiveListLength, CampaignSentDate}
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
+import io.circe.Decoder
+import sttp.client.asynchttpclient.WebSocketHandler
+import sttp.client.{SttpBackend, basicRequest}
+
+import scala.concurrent.duration._
+import io.circe.parser.decode
+import io.circe.generic.semiauto._
+import sttp.client._
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
+
+case class Newsletter(brazeNewsletterName: String)
+
+object Newsletter {
+  implicit val newsletterDecoder: Decoder[Newsletter] = deriveDecoder[Newsletter]
+}
 
 class Newsletters {
-  def allNewsletters: List[String] = EmailNewsletters.allNewsletters.map(_.brazeNewsletterName)
+  val timeout: FiniteDuration = 5.seconds
+
+  implicit val sttpBackend: SttpBackend[Future, Nothing, WebSocketHandler] = SttpFactory.createSttpBackend()
+
+  def fetchAllNewsletters(): EitherT[Future, String, List[String]] = {
+    def parseBody(bodyString: String): Either[String, List[String]] = {
+      decode[List[Newsletter]](bodyString) match {
+        case Left(error) => Left(error.getMessage)
+        case Right(body) => Right(body.map(_.brazeNewsletterName))
+      }
+    }
+
+    def handleNon200(response: Response[Either[String, String]]): Either[String, String] = response.body match {
+      case Right(body) if (response.code.isSuccess) => Right(body)
+      case _ => Left(s"${response.code.code}: ${response.statusText}")
+    }
+
+    val response = basicRequest
+      .get(uri"https://idapi.theguardian.com/newsletters")
+      .header("Origin", "https://www.theguardian.com")
+      .readTimeout(timeout)
+      .send()
+
+    for {
+      body <- EitherT(response.map(handleNon200))
+      parsedBody <- EitherT.fromEither[Future](parseBody(body))
+    } yield parsedBody
+  }
 
   private val reverseChrono: Ordering[ZonedDateTime] = (x: ZonedDateTime, y: ZonedDateTime) => y.compareTo(x)
 

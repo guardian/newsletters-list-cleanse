@@ -15,7 +15,8 @@ scalacOptions ++= Seq(
   "-deprecation",
   "-encoding", "UTF-8",
   "-target:jvm-1.8",
-  "-Ywarn-dead-code"
+  "-Ywarn-dead-code",
+  "-Ypartial-unification",
 )
 
 enablePlugins(RiffRaffArtifact)
@@ -38,7 +39,8 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-generic" % "0.12.3",
   "io.circe" %% "circe-parser"% "0.12.3",
   "com.softwaremill.sttp.client" %% "core" % "2.2.7",
-  "com.softwaremill.sttp.client" %% "async-http-client-backend-future" % "2.2.7"
+  "com.softwaremill.sttp.client" %% "async-http-client-backend-future" % "2.2.7",
+  "org.typelevel" %% "cats-core" % "2.1.1",
 )
 assemblyJarName := s"${name.value}.jar"
 assemblyMergeStrategy in assembly := {

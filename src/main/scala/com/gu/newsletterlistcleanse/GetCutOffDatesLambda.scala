@@ -2,12 +2,15 @@ package com.gu.newsletterlistcleanse
 
 import java.util.concurrent.TimeUnit
 
+import cats.implicits._
+import cats.data.EitherT
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
+import com.gu.newsletterlistcleanse.services.Newsletters
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import org.slf4j.{Logger, LoggerFactory}
@@ -17,6 +20,7 @@ import scala.beans.BeanProperty
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success, Try}
 
 case class GetCutOffDatesLambdaInput(
   @BeanProperty
@@ -40,7 +44,45 @@ class GetCutOffDatesLambda {
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
   def handler(lambdaInput: GetCutOffDatesLambdaInput, context: Context): Unit = {
-    Await.result(process(lambdaInput), timeout)
+    val result = Try(Await.result(process(lambdaInput).value, timeout))
+
+    result match {
+      case Success(Right(results)) => logger.info(s"Sent ${results.length} messages to SQS")
+      case Success(Left(error)) =>
+        logger.error(s"An error has occurred during the execution of the function: $error")
+        throw new RuntimeException(s"An error has occurred during the execution of the function: $error")
+      case Failure(exception) =>
+        logger.error(s"An error has occurred during the execution of the function", exception)
+        throw exception
+    }
+  }
+
+  def process(lambdaInput: GetCutOffDatesLambdaInput): EitherT[Future, String, List[SendMessageResult]] = {
+    val env = Env()
+    logger.info(s"Starting $env")
+    for {
+      newslettersToProcess <- fetchAllNewsletter(lambdaInput.newslettersToProcess.toList)
+      cutOffDates = calculateCutOffDates(newslettersToProcess)
+      _ = logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
+      result <- EitherT.liftF(sendCutOffs(cutOffDates))
+    } yield result
+  }
+
+  def fetchAllNewsletter(newslettersToProcess: List[String]): EitherT[Future, String, List[String]] = {
+    if (newslettersToProcess.nonEmpty) {
+      EitherT.pure[Future, String](newslettersToProcess)
+    } else {
+      newsletters.fetchAllNewsletters()
+    }
+  }
+
+  def calculateCutOffDates(newslettersToProcess: List[String]): List[NewsletterCutOff] = {
+    val listLengths = databaseOperations.fetchCampaignActiveListLength(newslettersToProcess)
+    val campaignSentDates = databaseOperations.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
+    val guardianTodayUKSentDates = if (newslettersToProcess.contains(Newsletters.guardianTodayUK)) {
+      databaseOperations.fetchGuardianTodayUKSentDates(Newsletters.maxCutOffPeriod)
+    } else Nil
+    newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
   }
 
   def sendCutOffs(cutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]] = {
@@ -50,31 +92,23 @@ class GetCutOffDatesLambda {
     }
     Future.sequence(results)
   }
-
-  def process(lambdaInput: GetCutOffDatesLambdaInput): Future[List[SendMessageResult]] = {
-    val env = Env()
-    logger.info(s"Starting $env")
-    val newslettersToProcess = if (lambdaInput.newslettersToProcess.nonEmpty) {
-      lambdaInput.newslettersToProcess.toList
-    } else {
-      newsletters.allNewsletters
-    }
-    val listLengths = databaseOperations.fetchCampaignActiveListLength(newslettersToProcess)
-    val campaignSentDates = databaseOperations.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
-    val guardianTodayUKSentDates = if (newslettersToProcess.contains(Newsletters.guardianTodayUK)) {
-      databaseOperations.fetchGuardianTodayUKSentDates(Newsletters.maxCutOffPeriod)
-    } else Nil
-    val cutOffDates = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
-    logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
-    sendCutOffs(cutOffDates)
-  }
 }
 
 object TestGetCutOffDates {
   def main(args: Array[String]): Unit = {
     val getCutOffDatesLambda = new GetCutOffDatesLambda()
-    val lambdaInput = GetCutOffDatesLambdaInput(Array("Editorial_AnimalsFarmed", "Editorial_TheLongRead"))
-    Await.result(getCutOffDatesLambda.process(lambdaInput), getCutOffDatesLambda.timeout)
+    val lambdaInput = GetCutOffDatesLambdaInput(Array.empty)
+    val result = Try(Await.result(getCutOffDatesLambda.process(lambdaInput).value, getCutOffDatesLambda.timeout))
+
+    result match {
+      case Success(Right(results)) => println(s"Sent ${results.length} messages to SQS")
+      case Success(Left(error)) =>
+        println(s"An error has occurred during the execution of the function: $error")
+        throw new RuntimeException(s"An error has occurred during the execution of the function: $error")
+      case Failure(exception) =>
+        println(s"An error has occurred during the execution of the function", exception)
+        throw exception
+    }
     getCutOffDatesLambda.sqsClient.shutdown()
   }
 }
