@@ -87,9 +87,9 @@ object Newsletters {
     "Editorial_MorningBriefingUK" -> 94,
     "Editorial_USMorningBriefing" -> 61,
     "Editorial_MorningMailAUS" -> 61,
-    //"Editorial_CoronavirusAustraliaAtAGlance" -> 94, => probably too recent to require cleaning
+    "Editorial_CoronavirusAustraliaAtAGlance" -> 13,
     "Editorial_GlobalDispatch" -> 13,
-    "Editorial_TheUSPoliticsMinute" -> 37,
+    "Editorial_TheUSPoliticsMinute" -> 10,
     "Editorial_AustralianPolitics" -> 61,
     "Editorial_BusinessToday" -> 61,
     "Editorial_GreenLight" -> 13,
@@ -127,6 +127,7 @@ object Newsletters {
     "Editorial_SocietyWeekly" -> 13,
     "Editorial_TeacherNetwork" -> 13,
     "Editorial_DesignReview" -> 7,
+    "Editorial_AustraliaUSelection" -> 30,
     // "Editorial_WeekendPapers" -> 94, => Marketing
     // "Editorial_OFM" -> 94, => Marketing
     // "MK_FrontPage" -> 94, => Marketing
