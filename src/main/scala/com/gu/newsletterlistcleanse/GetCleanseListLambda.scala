@@ -96,7 +96,9 @@ class GetCleanseListLambda {
 
 object TestGetCleanseList {
   def main(args: Array[String]): Unit = {
-    val json = """{"newsletterName":"Editorial_GuardianTodayUK","cutOffDate":"2020-06-07T11:31:14Z[Europe/London]", "activeListLength": 1000}"""
+    val json =
+      """{"newsletterName":"Editorial_GuardianTodayUK","cutOffDate":"2020-06-07T11:31:14Z[Europe/London]", "activeListLength": 1000,
+        |"brazeData":{"brazeSubscribeAttributeName":"TodayUk_Subscribe_Email","brazeSubscribeEventNamePrefix":"today_uk"}}""".stripMargin
     val parsedJson = decode[NewsletterCutOff](json).right.get
     val getCleanseListLambda = new GetCleanseListLambda
     Await.result(getCleanseListLambda.process(List(parsedJson), None), getCleanseListLambda.timeout)
