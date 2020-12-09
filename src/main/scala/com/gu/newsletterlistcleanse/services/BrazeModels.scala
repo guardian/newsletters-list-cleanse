@@ -1,7 +1,6 @@
 package com.gu.newsletterlistcleanse.services
 
 import java.time.Instant
-import com.gu.identity.model.{EmailNewsletter, EmailNewsletters}
 import com.gu.newsletterlistcleanse.models.BrazeData
 import sttp.client._
 import io.circe.{Decoder, Encoder, Json}
