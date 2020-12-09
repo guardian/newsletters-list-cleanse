@@ -43,7 +43,7 @@ class GetCleanseListLambda {
       case Right(newsletterCutOffs) =>
         Await.result(process(newsletterCutOffs, Some(context)), timeout)
       case Left(parseErrors) =>
-        parseErrors.foreach(e =>logger.error(e.getMessage))
+        parseErrors.foreach(e => logger.error(e.getMessage))
     }
   }
 
@@ -77,7 +77,8 @@ class GetCleanseListLambda {
       userIds = fetchCampaignCleanseList(campaignCutOff)
       cleanseList = CleanseList(
         campaignCutOff.newsletterName,
-        userIds
+        userIds,
+        campaignCutOff.brazeData
       )
       _ = logger.info(s"Found ${userIds.length} users of ${campaignCutOff.activeListLength} to remove from ${campaignCutOff.newsletterName}")
       _ = exportCleanseListToS3(cleanseList, env, contextOption)

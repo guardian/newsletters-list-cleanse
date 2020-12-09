@@ -1,7 +1,6 @@
 package com.gu.newsletterlistcleanse
 
 import java.util.concurrent.TimeUnit
-
 import cats.implicits._
 import cats.data.EitherT
 import com.amazonaws.auth.AWSCredentialsProvider
@@ -9,8 +8,8 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
-import com.gu.newsletterlistcleanse.models.NewsletterCutOff
-import com.gu.newsletterlistcleanse.services.Newsletters
+import com.gu.newsletterlistcleanse.models.{BrazeData, NewsletterCutOff}
+import com.gu.newsletterlistcleanse.services.{Newsletter, Newsletters}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import org.slf4j.{Logger, LoggerFactory}
@@ -61,28 +60,36 @@ class GetCutOffDatesLambda {
     val env = Env()
     logger.info(s"Starting $env")
     for {
-      newslettersToProcess <- fetchAllNewsletter(lambdaInput.newslettersToProcess.toList)
+      newslettersToProcess <- fetchNewsletters(lambdaInput.newslettersToProcess.toList)
       cutOffDates = calculateCutOffDates(newslettersToProcess)
       _ = logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
       result <- EitherT.liftF(sendCutOffs(cutOffDates))
     } yield result
   }
 
-  def fetchAllNewsletter(newslettersToProcess: List[String]): EitherT[Future, String, List[String]] = {
+  def fetchNewsletters(newslettersToProcess: List[String]): EitherT[Future, String, List[Newsletter]] = {
     if (newslettersToProcess.nonEmpty) {
-      EitherT.pure[Future, String](newslettersToProcess)
+      newsletters.fetchNewsletters(newslettersToProcess)
+//      EitherT.pure[Future, String](newslettersToProcess)
     } else {
-      newsletters.fetchAllNewsletters()
+      newsletters.fetchNewsletters()
     }
   }
 
-  def calculateCutOffDates(newslettersToProcess: List[String]): List[NewsletterCutOff] = {
-    val listLengths = databaseOperations.fetchCampaignActiveListLength(newslettersToProcess)
-    val campaignSentDates = databaseOperations.fetchCampaignSentDates(newslettersToProcess, Newsletters.maxCutOffPeriod)
-    val guardianTodayUKSentDates = if (newslettersToProcess.contains(Newsletters.guardianTodayUK)) {
+  def calculateCutOffDates(newslettersToProcess: List[Newsletter]): List[NewsletterCutOff] = {
+    val newsletterNamesToProcess = newslettersToProcess.map(_.brazeNewsletterName)
+    val listLengths = databaseOperations.fetchCampaignActiveListLength(newsletterNamesToProcess)
+    val campaignSentDates = databaseOperations.fetchCampaignSentDates(newsletterNamesToProcess, Newsletters.maxCutOffPeriod)
+    val guardianTodayUKSentDates = if (newsletterNamesToProcess.contains(Newsletters.guardianTodayUK)) {
       databaseOperations.fetchGuardianTodayUKSentDates(Newsletters.maxCutOffPeriod)
     } else Nil
-    newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
+    val result = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
+      .zip(newslettersToProcess)
+      .map{ case (partiallyAppliedCutoff, newsletter) => partiallyAppliedCutoff(
+        BrazeData(newsletter.brazeSubscribeAttributeName, newsletter.brazeSubscribeEventNamePrefix)
+      )}
+    println(result.mkString(", "))
+    result
   }
 
   def sendCutOffs(cutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]] = {
