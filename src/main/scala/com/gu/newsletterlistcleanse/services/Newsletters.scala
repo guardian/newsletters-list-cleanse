@@ -5,7 +5,7 @@ import cats.implicits._
 import cats.data.EitherT
 import com.gu.newsletterlistcleanse.db.ActiveListLength.getActiveListLength
 import com.gu.newsletterlistcleanse.db.{ActiveListLength, CampaignSentDate}
-import com.gu.newsletterlistcleanse.models.{BrazeData, NewsletterCutOff}
+import com.gu.newsletterlistcleanse.models.NewsletterCutOff
 import io.circe.Decoder
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.{SttpBackend, basicRequest}
@@ -65,12 +65,14 @@ class Newsletters {
 
   private val reverseChrono: Ordering[ZonedDateTime] = (x: ZonedDateTime, y: ZonedDateTime) => y.compareTo(x)
 
-  def computeCutOffDates(campaignSentDates: List[CampaignSentDate],
-    listLengths: List[ActiveListLength]): List[BrazeData => NewsletterCutOff] = {
+  def computeCutOffDates(
+    campaignSentDates: List[CampaignSentDate],
+    listLengths: List[ActiveListLength]
+  ): List[NewsletterCutOff] = {
 
     def extractCutOffBasedOnCampaign(
       campaignName: String,
-      sentDates: List[CampaignSentDate]): Option[BrazeData => NewsletterCutOff] =
+      sentDates: List[CampaignSentDate]): Option[NewsletterCutOff] =
       for {
         unOpenCount <- Newsletters.cleansingPolicy.get(campaignName)
         activeCount = getActiveListLength(listLengths, campaignName)

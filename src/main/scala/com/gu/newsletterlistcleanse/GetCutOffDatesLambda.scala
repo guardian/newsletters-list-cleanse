@@ -8,7 +8,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
-import com.gu.newsletterlistcleanse.models.{BrazeData, NewsletterCutOff}
+import com.gu.newsletterlistcleanse.models.{BrazeData, NewsletterCutOffWithBraze}
 import com.gu.newsletterlistcleanse.services.{Newsletter, Newsletters}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
@@ -70,29 +70,33 @@ class GetCutOffDatesLambda {
   def fetchNewsletters(newslettersToProcess: List[String]): EitherT[Future, String, List[Newsletter]] = {
     if (newslettersToProcess.nonEmpty) {
       newsletters.fetchNewsletters(newslettersToProcess)
-//      EitherT.pure[Future, String](newslettersToProcess)
     } else {
       newsletters.fetchNewsletters()
     }
   }
 
-  def calculateCutOffDates(newslettersToProcess: List[Newsletter]): List[NewsletterCutOff] = {
+  def calculateCutOffDates(newslettersToProcess: List[Newsletter]): List[NewsletterCutOffWithBraze] = {
     val newsletterNamesToProcess = newslettersToProcess.map(_.brazeNewsletterName)
     val listLengths = databaseOperations.fetchCampaignActiveListLength(newsletterNamesToProcess)
     val campaignSentDates = databaseOperations.fetchCampaignSentDates(newsletterNamesToProcess, Newsletters.maxCutOffPeriod)
     val guardianTodayUKSentDates = if (newsletterNamesToProcess.contains(Newsletters.guardianTodayUK)) {
       databaseOperations.fetchGuardianTodayUKSentDates(Newsletters.maxCutOffPeriod)
     } else Nil
-    val result = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
-      .zip(newslettersToProcess)
-      .map{ case (partiallyAppliedCutoff, newsletter) => partiallyAppliedCutoff(
-        BrazeData(newsletter.brazeSubscribeAttributeName, newsletter.brazeSubscribeEventNamePrefix)
-      )}
+    val cutOffs = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
+    val result = for {
+      cutOff <- cutOffs
+      newsletter <- newslettersToProcess.find(newsletter => newsletter.brazeNewsletterName == cutOff.newsletterName)
+      brazeData = BrazeData(newsletter.brazeSubscribeAttributeName, newsletter.brazeSubscribeEventNamePrefix)
+    } yield
+      NewsletterCutOffWithBraze(cutOff, brazeData)
+
+
     println(result.mkString(", "))
     result
+
   }
 
-  def sendCutOffs(cutOffDates: List[NewsletterCutOff]): Future[List[SendMessageResult]] = {
+  def sendCutOffs(cutOffDates: List[NewsletterCutOffWithBraze]): Future[List[SendMessageResult]] = {
     val results = cutOffDates.map { cutoffDate =>
       logger.info(s"Sending cut-off date: $cutoffDate")
       AwsSQSSend.sendMessage(sqsClient, config.cutOffSqsUrl, Payload(cutoffDate.asJson.noSpaces))
