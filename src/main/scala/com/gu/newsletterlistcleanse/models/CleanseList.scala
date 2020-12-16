@@ -1,8 +1,7 @@
 package com.gu.newsletterlistcleanse.models
 
-import io.circe.{Decoder, Encoder, Json}
+import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
-import io.circe.syntax._
 
 
 case class CleanseList(newsletterName: String, userIdList: List[String], brazeData: BrazeData){
@@ -13,15 +12,6 @@ case class CleanseList(newsletterName: String, userIdList: List[String], brazeDa
 }
 
 object CleanseList {
-  implicit val cleanseListEncoder: Encoder[CleanseList] = new Encoder[CleanseList] {
-    override def apply(cl: CleanseList): Json = Json.obj(
-      ("newsletterName", cl.newsletterName.asJson),
-      ("userIdList", cl.userIdList.asJson),
-      ("brazeData", Json.obj(
-        ("brazeSubscribeAttributeName", cl.brazeData.brazeSubscribeAttributeName.asJson),
-        ("brazeSubscribeEventNamePrefix", cl.brazeData.brazeSubscribeEventNamePrefix.asJson)
-      ))
-    )
-  }
+  implicit val cleanseListEncoder: Encoder[CleanseList] = deriveEncoder
   implicit val cleanseListDecoder: Decoder[CleanseList] = deriveDecoder
 }
