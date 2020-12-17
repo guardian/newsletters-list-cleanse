@@ -46,7 +46,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
     val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
-    result.head(testBrazeData).cutOffDate should be(aDate)
+    result.head.cutOffDate should be(aDate)
   }
 
   it should "ignore a newsletter that hasn't got a cleansing policy yet" in {
@@ -65,7 +65,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
     val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
-    result.head(testBrazeData).cutOffDate should be(aDate.plusDays(1000 - 94))
+    result.head.cutOffDate should be(aDate.plusDays(1000 - 94))
   }
 
   it should "pick the 94th date of the campaignSentDate, regardless of the order of the rows returned by the DB" in {
@@ -73,7 +73,7 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
       aCampaignSentDate.copy(timestamp = aCampaignSentDate.timestamp.plusDays(dateOffset))
     }
     val result = newsletters.computeCutOffDates(listOfSentDates, aListLength)
-    result.head(testBrazeData).cutOffDate should be(aDate.plusDays(1000 - 94))
+    result.head.cutOffDate should be(aDate.plusDays(1000 - 94))
   }
 
   it should "compute no matter how many campaigns are being sent" in {
@@ -87,8 +87,8 @@ class NewslettersSpec extends AnyFlatSpec with Matchers {
       )
     }
     val result = newsletters.computeCutOffDates(listOfSentDates1 ++ listOfSentDates2, aListLength)
-    result.head(testBrazeData).cutOffDate should be(aDate.plusDays(1000 - 94))
-    result(1)(testBrazeData).cutOffDate should be(aDate.plusDays(1000 - 61))
+    result.head.cutOffDate should be(aDate.plusDays(1000 - 94))
+    result(1).cutOffDate should be(aDate.plusDays(1000 - 61))
   }
 
   "The fetchNewsletters logic" should "return all Newsletters if no selection is passed" in {
