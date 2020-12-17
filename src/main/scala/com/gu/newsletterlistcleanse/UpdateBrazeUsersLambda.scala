@@ -2,14 +2,11 @@ package com.gu.newsletterlistcleanse
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.gu.newsletterlistcleanse.EitherConverter.EitherList
-import com.gu.newsletterlistcleanse.services.Newsletters.getIdentityNewsletterFromName
 import com.gu.newsletterlistcleanse.services.{BrazeClient, BrazeError, BrazeNewsletterSubscriptionsUpdate, SimpleBrazeResponse, UserExportRequest, UserTrackRequest}
-import com.gu.newsletterlistcleanse.models.CleanseList
-import com.gu.identity.model.EmailNewsletter
+import com.gu.newsletterlistcleanse.models.{BrazeData, CleanseList}
 import com.gu.newsletterlistcleanse.sqs.SqsMessageParser
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -63,11 +60,11 @@ class UpdateBrazeUsersLambda {
     Future.sequence(allInvalidUserTasks).map(invalidUsers => invalidUsers.toEitherList.map(_.flatten))
   }
 
-  private def updateUsers(userIds: List[String], identityNewsletter: EmailNewsletter): Future[Either[BrazeError, SimpleBrazeResponse]] = {
+  private def updateUsers(userIds: List[String], brazeData: BrazeData): Future[Either[BrazeError, SimpleBrazeResponse]] = {
     val timestamp: Instant = Instant.now()
     val requests = for {
       userId <- userIds
-    } yield BrazeNewsletterSubscriptionsUpdate(userId, Map((identityNewsletter, config.subscribeUsers)))
+    } yield BrazeNewsletterSubscriptionsUpdate(userId, Map((brazeData, config.subscribeUsers)))
 
     if (!config.dryRun) {
       brazeClient.updateUser(config.brazeApiToken, UserTrackRequest(requests, timestamp))
@@ -86,9 +83,8 @@ class UpdateBrazeUsersLambda {
       filteredUserIdList = cleanseList.userIdList.toSet -- (allInvalidUsers ++ archiveFilterSet)
       batchedUserIds = filteredUserIdList.grouped(updateBatchSize)
       batch <- batchedUserIds
-      newsletterName = cleanseList.newsletterName
-      identityNewsletter <- getIdentityNewsletterFromName(newsletterName)
-    } yield updateUsers(batch.toList, identityNewsletter)
+      brazeData = cleanseList.brazeData
+    } yield updateUsers(batch.toList, brazeData)
 
     Future.sequence(brazeResponses).map(brazeResponse => brazeResponse.toEitherList)
   }
@@ -109,7 +105,8 @@ class UpdateBrazeUsersLambda {
 
 object TestUpdateBrazeUsers {
   def main(args: Array[String]): Unit = {
-    val cleanseLists = List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb", "mystery_user 1")))
+    val cleanseLists = List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb", "mystery_user 1"),
+      BrazeData("AnimalsFarmed_Subscribe_Email", "animals_farmed")))
     val updateBrazeUsersLambda = new UpdateBrazeUsersLambda()
     val result = Try(Await.result(updateBrazeUsersLambda.getBrazeResults(cleanseLists), updateBrazeUsersLambda.timeout))
     Await.result(updateBrazeUsersLambda.brazeClient.sttpBackend.close(), Duration(15, TimeUnit.SECONDS))

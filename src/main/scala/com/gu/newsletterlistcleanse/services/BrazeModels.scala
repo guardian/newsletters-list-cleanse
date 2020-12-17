@@ -1,8 +1,7 @@
 package com.gu.newsletterlistcleanse.services
 
 import java.time.Instant
-
-import com.gu.identity.model.{EmailNewsletter, EmailNewsletters}
+import com.gu.newsletterlistcleanse.models.BrazeData
 import sttp.client._
 import io.circe.{Decoder, Encoder, Json}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
@@ -38,7 +37,7 @@ object BrazeError {
 }
 
 case class BrazeNewsletterSubscriptionsUpdate(externalId: String,
-                                              newsletterSubscriptions: Map[EmailNewsletter, Boolean])
+                                              newsletterSubscriptions: Map[BrazeData, Boolean])
 
 object BrazeNewsletterSubscriptionsUpdate {
   implicit val subscriptionUpdateEncoder: Encoder[BrazeNewsletterSubscriptionsUpdate] =
@@ -46,13 +45,13 @@ object BrazeNewsletterSubscriptionsUpdate {
       override def apply(update: BrazeNewsletterSubscriptionsUpdate): Json = {
         val jsonSubs = update.newsletterSubscriptions.map {
           // This case only relevant whilst migrating email_subscribe_today_uk custom attribute
-          case (newsLetter: EmailNewsletter, isSubscribed) if newsLetter == EmailNewsletters.guardianTodayUk =>
+          case (brazeData, isSubscribed) if brazeData.brazeSubscribeAttributeName == "TodayUk_Subscribe_Email" =>
             Map(
-              newsLetter.brazeSubscribeAttributeName -> Json.fromBoolean(isSubscribed),
+              brazeData.brazeSubscribeAttributeName -> Json.fromBoolean(isSubscribed),
               "email_subscribe_today_uk" -> Json.fromBoolean(isSubscribed)
             )
-          case (newsLetter, isSubscribed) =>
-            Map(newsLetter.brazeSubscribeAttributeName -> Json.fromBoolean(isSubscribed))
+          case (brazeData, isSubscribed) =>
+            Map(brazeData.brazeSubscribeAttributeName -> Json.fromBoolean(isSubscribed))
         }.fold(Map.empty)(_ ++ _)
         (jsonSubs ++ Map("external_id" -> Json.fromString(update.externalId))).asJson
       }
@@ -80,14 +79,14 @@ object BrazeEvent {
 
 object BrazeSubscribeEvent {
 
-  def apply(externalId: String, sub: EmailNewsletter, isSubscribed: Boolean, timestamp: Instant, updateExistingOnlyField: Boolean = false): List[BrazeEvent] = {
+  def apply(externalId: String, brazeData: BrazeData, isSubscribed: Boolean, timestamp: Instant, updateExistingOnlyField: Boolean = false): List[BrazeEvent] = {
     // Marketing need to be able to segment subscription events by campaign. To do this the campaign name must be in the name of the event,
     // (as braze can only segment by custom event name not property).
-    val newsletterEventName = if (isSubscribed) s"${sub.brazeSubscribeEventNamePrefix}_subscribe_email_date" else s"${sub.brazeSubscribeEventNamePrefix}_unsubscribe_email_date"
+    val newsletterEventName = if (isSubscribed) s"${brazeData.brazeSubscribeEventNamePrefix}_subscribe_email_date" else s"${brazeData.brazeSubscribeEventNamePrefix}_unsubscribe_email_date"
     val generalEventName = if (isSubscribed) "EditorialSubscribe" else "EditorialUnsubscribe"
     List(
-      BrazeEvent(externalId, generalEventName, timestamp.toString, BrazeEventProperties(sub.brazeSubscribeAttributeName), updateExistingOnlyField),
-      BrazeEvent(externalId, newsletterEventName, timestamp.toString, BrazeEventProperties(sub.brazeSubscribeAttributeName), updateExistingOnlyField)
+      BrazeEvent(externalId, generalEventName, timestamp.toString, BrazeEventProperties(brazeData.brazeSubscribeAttributeName), updateExistingOnlyField),
+      BrazeEvent(externalId, newsletterEventName, timestamp.toString, BrazeEventProperties(brazeData.brazeSubscribeAttributeName), updateExistingOnlyField)
     )
   }
 }
@@ -98,8 +97,8 @@ object UserTrackRequest {
   def apply(userUpdates: List[BrazeNewsletterSubscriptionsUpdate], timestamp: Instant): UserTrackRequest = {
     val events = for {
       userUpdate <- userUpdates
-      (subscription, isSubscribed) <- userUpdate.newsletterSubscriptions
-      event <- BrazeSubscribeEvent(userUpdate.externalId, subscription, isSubscribed, timestamp)
+      (brazeData, isSubscribed) <- userUpdate.newsletterSubscriptions
+      event <- BrazeSubscribeEvent(userUpdate.externalId, brazeData, isSubscribed, timestamp)
     } yield event
 
     UserTrackRequest(userUpdates, events)

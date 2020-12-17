@@ -1,10 +1,8 @@
 package com.gu.newsletterlistcleanse.services
 
 import java.time.ZonedDateTime
-
 import cats.implicits._
 import cats.data.EitherT
-import com.gu.identity.model.{EmailNewsletter, EmailNewsletters}
 import com.gu.newsletterlistcleanse.db.ActiveListLength.getActiveListLength
 import com.gu.newsletterlistcleanse.db.{ActiveListLength, CampaignSentDate}
 import com.gu.newsletterlistcleanse.models.NewsletterCutOff
@@ -21,7 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
-case class Newsletter(brazeNewsletterName: String)
+case class Newsletter(brazeNewsletterName: String, brazeSubscribeAttributeName: String, brazeSubscribeEventNamePrefix: String)
 
 object Newsletter {
   implicit val newsletterDecoder: Decoder[Newsletter] = deriveDecoder[Newsletter]
@@ -32,11 +30,19 @@ class Newsletters {
 
   implicit val sttpBackend: SttpBackend[Future, Nothing, WebSocketHandler] = SttpFactory.createSttpBackend()
 
-  def fetchAllNewsletters(): EitherT[Future, String, List[String]] = {
-    def parseBody(bodyString: String): Either[String, List[String]] = {
+  def filterNewsletters(allNewsletters: List[Newsletter], filterList: List[String] = Nil): List[Newsletter] =
+    filterList match {
+      case Nil =>
+        allNewsletters
+      case _ =>
+        allNewsletters.filter(newsletter => filterList.contains(newsletter.brazeNewsletterName))
+    }
+
+  def fetchNewsletters(filterList: List[String] = Nil): EitherT[Future, String, List[Newsletter]] = {
+    def parseBody(bodyString: String): Either[String, List[Newsletter]] = {
       decode[List[Newsletter]](bodyString) match {
         case Left(error) => Left(error.getMessage)
-        case Right(body) => Right(body.map(_.brazeNewsletterName))
+        case Right(body) => Right(filterNewsletters(body, filterList))
       }
     }
 
@@ -59,22 +65,27 @@ class Newsletters {
 
   private val reverseChrono: Ordering[ZonedDateTime] = (x: ZonedDateTime, y: ZonedDateTime) => y.compareTo(x)
 
-  def computeCutOffDates(campaignSentDates: List[CampaignSentDate], listLengths: List[ActiveListLength]): List[NewsletterCutOff] = {
+  def computeCutOffDates(
+    campaignSentDates: List[CampaignSentDate],
+    listLengths: List[ActiveListLength]
+  ): List[NewsletterCutOff] = {
 
-    def extractCutOffBasedOnCampaign(campaignName: String, sentDates: List[CampaignSentDate]): Option[NewsletterCutOff] = for {
-
-      unOpenCount <- Newsletters.cleansingPolicy.get(campaignName)
-      activeCount = getActiveListLength(listLengths, campaignName)
-      cutOff <- sentDates
-        .sortBy(_.timestamp)(reverseChrono)
-        .drop(unOpenCount - 1)
-        .headOption
-        .map(send => NewsletterCutOff(campaignName, send.timestamp, activeCount))
-    } yield cutOff
+    def extractCutOffBasedOnCampaign(
+      campaignName: String,
+      sentDates: List[CampaignSentDate]): Option[NewsletterCutOff] =
+      for {
+        unOpenCount <- Newsletters.cleansingPolicy.get(campaignName)
+        activeCount = getActiveListLength(listLengths, campaignName)
+        cutOff <- sentDates
+          .sortBy(_.timestamp)(reverseChrono)
+          .drop(unOpenCount - 1)
+          .headOption
+          .map(send => NewsletterCutOff(campaignName, send.timestamp, activeCount))
+      } yield cutOff
 
     campaignSentDates.groupBy(_.campaignName)
       .toList
-      .flatMap { case (campaignName, sentDates) => extractCutOffBasedOnCampaign(campaignName, sentDates) }
+      .flatMap { case (campaignName, sentDates ) => extractCutOffBasedOnCampaign(campaignName, sentDates) }
   }
 }
 
@@ -137,7 +148,4 @@ object Newsletters {
 
   val guardianTodayUK = "Editorial_GuardianTodayUK"
   val guardianTodayUKCampaigns = List("Editorial_GuardianTodayUK_Weekend", "Editorial_GuardianTodayUK_Weekdays")
-
-  def getIdentityNewsletterFromName(newsletterName: String): Option[EmailNewsletter] =
-    EmailNewsletters.allNewsletters.find(_.brazeNewsletterName == newsletterName)
 }
