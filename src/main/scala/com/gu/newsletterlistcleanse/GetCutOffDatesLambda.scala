@@ -8,10 +8,11 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
-import com.gu.newsletterlistcleanse.models.{BrazeData, NewsletterCutOffWithBraze}
+import com.gu.newsletterlistcleanse.models.{BrazeData, NewsletterCutOff, NewsletterCutOffWithBraze}
 import com.gu.newsletterlistcleanse.services.{Newsletter, Newsletters}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
+import com.gu.newsletterlistcleanse.EitherConverter._
 import org.slf4j.{Logger, LoggerFactory}
 import io.circe.syntax.EncoderOps
 
@@ -61,7 +62,7 @@ class GetCutOffDatesLambda {
     logger.info(s"Starting $env")
     for {
       newslettersToProcess <- fetchNewsletters(lambdaInput.newslettersToProcess.toList)
-      cutOffDates = calculateCutOffDates(newslettersToProcess)
+      cutOffDates <- EitherT.fromEither[Future](calculateCutOffDates(newslettersToProcess))
       _ = logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
       result <- EitherT.liftF(sendCutOffs(cutOffDates))
     } yield result
@@ -75,7 +76,20 @@ class GetCutOffDatesLambda {
     }
   }
 
-  def calculateCutOffDates(newslettersToProcess: List[Newsletter]): List[NewsletterCutOffWithBraze] = {
+  def calculateCutOffDates(newslettersToProcess: List[Newsletter]): Either[String, List[NewsletterCutOffWithBraze]] = {
+
+    def addBrazeData(cutOff: NewsletterCutOff): Either[String, NewsletterCutOffWithBraze] = {
+      newslettersToProcess
+        .find(newsletter => newsletter.brazeNewsletterName == cutOff.newsletterName)
+        .toRight(s"Couldn't find ${cutOff.newsletterName}")
+        .map { newsletter =>
+          val brazeData = BrazeData(newsletter.brazeSubscribeAttributeName, newsletter.brazeSubscribeEventNamePrefix)
+          val newsletterCutOffWithBraze = NewsletterCutOffWithBraze(cutOff, brazeData)
+          logger.info(s"Added BrazeData to ${cutOff.newsletterName}:\t${newsletterCutOffWithBraze.toString}")
+          newsletterCutOffWithBraze
+        }
+      }
+
     val newsletterNamesToProcess = newslettersToProcess.map(_.brazeNewsletterName)
     val listLengths = databaseOperations.fetchCampaignActiveListLength(newsletterNamesToProcess)
     val campaignSentDates = databaseOperations.fetchCampaignSentDates(newsletterNamesToProcess, Newsletters.maxCutOffPeriod)
@@ -83,16 +97,9 @@ class GetCutOffDatesLambda {
       databaseOperations.fetchGuardianTodayUKSentDates(Newsletters.maxCutOffPeriod)
     } else Nil
     val cutOffs = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
-    val result = for {
-      cutOff <- cutOffs
-      newsletter <- newslettersToProcess.find(newsletter => newsletter.brazeNewsletterName == cutOff.newsletterName)
-      brazeData = BrazeData(newsletter.brazeSubscribeAttributeName, newsletter.brazeSubscribeEventNamePrefix)
-    } yield
-      NewsletterCutOffWithBraze(cutOff, brazeData)
 
-
-    println(result.mkString(", "))
-    result
+    val result = cutOffs.map(addBrazeData)
+    result.toEitherList.leftMap(_.mkString(", "))
 
   }
 
