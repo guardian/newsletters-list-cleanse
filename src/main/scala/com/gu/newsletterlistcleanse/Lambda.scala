@@ -8,7 +8,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.Newsletter
-import com.gu.newsletterlistcleanse.services.{CutOffDatesService, NewslettersApiClient}
+import com.gu.newsletterlistcleanse.services.{CutOffDatesService, CleanseListService, NewslettersApiClient}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.beans.BeanProperty
@@ -36,17 +36,18 @@ class Lambda {
   val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
   val newsletters: NewslettersApiClient = new NewslettersApiClient()
 
-  val cutOffDatesStep = new CutOffDatesService(databaseOperations)
-  val getCleanseListStep = new GetCleanseListLambda(config, s3Client, databaseOperations)
+  val cutOffDatesService = new CutOffDatesService(databaseOperations)
+  val cleanseListService = new CleanseListService(config, s3Client, databaseOperations)
 
   def handler(lambdaInput: GetCutOffDatesLambdaInput, context: Context): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
     for {
       newslettersToProcess <- fetchNewsletters(lambdaInput.newslettersToProcess.toList)
-      cutOffDates <- EitherT.fromEither[Future](cutOffDatesStep.fetchAndComputeCutOffDates(newslettersToProcess))
+      cutOffDates <- EitherT.fromEither[Future](cutOffDatesService.fetchAndComputeCutOffDates(newslettersToProcess))
+      cleanseLists = cleanseListService.process(cutOffDates, Some(context))
     } yield {
-      cutOffDates
+      cleanseLists
     }
 
   }

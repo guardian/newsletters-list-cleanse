@@ -1,15 +1,16 @@
-package com.gu.newsletterlistcleanse
+package com.gu.newsletterlistcleanse.services
 
 import java.time.LocalDate
+
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.s3.AmazonS3
 import com.gu.newsletterlistcleanse.db.DatabaseOperations
 import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff, NewsletterCutOffWithBraze, Newsletters}
+import com.gu.newsletterlistcleanse.{Env, NewsletterConfig}
 import io.circe.syntax._
-
 import org.slf4j.{Logger, LoggerFactory}
 
-class GetCleanseListLambda(config: NewsletterConfig, s3Client: AmazonS3, databaseOperations: DatabaseOperations) {
+class CleanseListService(config: NewsletterConfig, s3Client: AmazonS3, databaseOperations: DatabaseOperations) {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
