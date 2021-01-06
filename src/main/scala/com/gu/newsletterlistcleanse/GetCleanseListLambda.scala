@@ -2,6 +2,7 @@ package com.gu.newsletterlistcleanse
 
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
+
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.lambda.runtime.Context
@@ -10,8 +11,7 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.sqs.AmazonSQSAsync
 import com.amazonaws.services.sqs.model.SendMessageResult
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
-import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff, NewsletterCutOffWithBraze}
-import com.gu.newsletterlistcleanse.services.Newsletters
+import com.gu.newsletterlistcleanse.models.{CleanseList, NewsletterCutOff, NewsletterCutOffWithBraze, Newsletters}
 import com.gu.newsletterlistcleanse.sqs.{AwsSQSSend, SqsMessageParser}
 import com.gu.newsletterlistcleanse.sqs.AwsSQSSend.Payload
 import io.circe.parser._

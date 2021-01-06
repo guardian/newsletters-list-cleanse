@@ -3,7 +3,8 @@ package com.gu.newsletterlistcleanse
 import cats.data.EitherT
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
-import com.gu.newsletterlistcleanse.services.{CutOffDatesService, Newsletter, Newsletters}
+import com.gu.newsletterlistcleanse.models.Newsletter
+import com.gu.newsletterlistcleanse.services.{CutOffDatesService, NewslettersApiClient}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.beans.BeanProperty
@@ -25,7 +26,7 @@ class Lambda {
   val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
   val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
-  val newsletters: Newsletters = new Newsletters()
+  val newsletters: NewslettersApiClient = new NewslettersApiClient()
 
   val cutOffDatesStep = new CutOffDatesService(databaseOperations)
 

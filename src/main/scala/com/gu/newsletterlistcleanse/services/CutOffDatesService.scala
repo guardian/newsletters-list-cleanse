@@ -6,7 +6,7 @@ import cats.implicits._
 import com.gu.newsletterlistcleanse.EitherConverter._
 import com.gu.newsletterlistcleanse.db.ActiveListLength.getActiveListLength
 import com.gu.newsletterlistcleanse.db.{ActiveListLength, CampaignSentDate, DatabaseOperations}
-import com.gu.newsletterlistcleanse.models.{BrazeData, NewsletterCutOff, NewsletterCutOffWithBraze}
+import com.gu.newsletterlistcleanse.models.{BrazeData, Newsletter, NewsletterCutOff, NewsletterCutOffWithBraze, Newsletters}
 import org.slf4j.{Logger, LoggerFactory}
 
 

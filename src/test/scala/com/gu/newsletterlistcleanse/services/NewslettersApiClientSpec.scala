@@ -1,11 +1,12 @@
 package com.gu.newsletterlistcleanse.services
 
+import com.gu.newsletterlistcleanse.models.Newsletter
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class NewslettersSpec extends AnyFlatSpec with Matchers {
+class NewslettersApiClientSpec extends AnyFlatSpec with Matchers {
 
-  val newsletters = new Newsletters()
+  val newsletters = new NewslettersApiClient()
 
   val testAllNewsletters = List(Newsletter("test1", "testAttribute", "testEventName"),
     Newsletter("test2", "testAttribute", "testEventName"),
