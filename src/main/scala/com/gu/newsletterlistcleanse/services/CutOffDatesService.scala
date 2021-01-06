@@ -1,40 +1,18 @@
-package com.gu.newsletterlistcleanse
+package com.gu.newsletterlistcleanse.services
+
+import java.time.ZonedDateTime
 
 import cats.implicits._
-import cats.data.EitherT
-import com.gu.newsletterlistcleanse.db.DatabaseOperations
-import com.gu.newsletterlistcleanse.models.{BrazeData, NewsletterCutOff, NewsletterCutOffWithBraze}
-import com.gu.newsletterlistcleanse.services.{Newsletter, Newsletters}
 import com.gu.newsletterlistcleanse.EitherConverter._
+import com.gu.newsletterlistcleanse.db.ActiveListLength.getActiveListLength
+import com.gu.newsletterlistcleanse.db.{ActiveListLength, CampaignSentDate, DatabaseOperations}
+import com.gu.newsletterlistcleanse.models.{BrazeData, NewsletterCutOff, NewsletterCutOffWithBraze}
 import org.slf4j.{Logger, LoggerFactory}
-import io.circe.syntax.EncoderOps
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 
-class GetCutOffDatesLambda(databaseOperations: DatabaseOperations) {
+class CutOffDatesService(databaseOperations: DatabaseOperations) {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-  val newsletters: Newsletters = new Newsletters()
-
-  def fetchAndCalculateCutOffDates(newslettersToProcess: List[String]): EitherT[Future, String, List[NewsletterCutOffWithBraze]] = {
-
-    for {
-      newslettersToProcess <- fetchNewsletters(newslettersToProcess)
-      cutOffDates <- EitherT.fromEither[Future](calculateCutOffDates(newslettersToProcess))
-    } yield {
-      logger.info(s"result: ${cutOffDates.asJson.noSpaces}")
-      cutOffDates
-    }
-  }
-
-  def fetchNewsletters(newslettersToProcess: List[String]): EitherT[Future, String, List[Newsletter]] = {
-    if (newslettersToProcess.nonEmpty) {
-      newsletters.fetchNewsletters(newslettersToProcess)
-    } else {
-      newsletters.fetchNewsletters()
-    }
-  }
 
   def calculateCutOffDates(newslettersToProcess: List[Newsletter]): Either[String, List[NewsletterCutOffWithBraze]] = {
 
@@ -56,10 +34,34 @@ class GetCutOffDatesLambda(databaseOperations: DatabaseOperations) {
     val guardianTodayUKSentDates = if (newsletterNamesToProcess.contains(Newsletters.guardianTodayUK)) {
       databaseOperations.fetchGuardianTodayUKSentDates(Newsletters.maxCutOffPeriod)
     } else Nil
-    val cutOffs = newsletters.computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
+    val cutOffs = computeCutOffDates(campaignSentDates ++ guardianTodayUKSentDates, listLengths)
 
     val result = cutOffs.map(addBrazeData)
     result.toEitherList.leftMap(_.mkString(", "))
+  }
 
+  private val reverseChrono: Ordering[ZonedDateTime] = (x: ZonedDateTime, y: ZonedDateTime) => y.compareTo(x)
+
+  def computeCutOffDates(
+    campaignSentDates: List[CampaignSentDate],
+    listLengths: List[ActiveListLength]
+  ): List[NewsletterCutOff] = {
+
+    def extractCutOffBasedOnCampaign(
+      campaignName: String,
+      sentDates: List[CampaignSentDate]): Option[NewsletterCutOff] =
+      for {
+        unOpenCount <- Newsletters.cleansingPolicy.get(campaignName)
+        activeCount = getActiveListLength(listLengths, campaignName)
+        cutOff <- sentDates
+          .sortBy(_.timestamp)(reverseChrono)
+          .drop(unOpenCount - 1)
+          .headOption
+          .map(send => NewsletterCutOff(campaignName, send.timestamp, activeCount))
+      } yield cutOff
+
+    campaignSentDates.groupBy(_.campaignName)
+      .toList
+      .flatMap { case (campaignName, sentDates ) => extractCutOffBasedOnCampaign(campaignName, sentDates) }
   }
 }

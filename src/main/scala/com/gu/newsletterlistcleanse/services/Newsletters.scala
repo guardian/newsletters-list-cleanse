@@ -62,31 +62,6 @@ class Newsletters {
       parsedBody <- EitherT.fromEither[Future](parseBody(body))
     } yield parsedBody
   }
-
-  private val reverseChrono: Ordering[ZonedDateTime] = (x: ZonedDateTime, y: ZonedDateTime) => y.compareTo(x)
-
-  def computeCutOffDates(
-    campaignSentDates: List[CampaignSentDate],
-    listLengths: List[ActiveListLength]
-  ): List[NewsletterCutOff] = {
-
-    def extractCutOffBasedOnCampaign(
-      campaignName: String,
-      sentDates: List[CampaignSentDate]): Option[NewsletterCutOff] =
-      for {
-        unOpenCount <- Newsletters.cleansingPolicy.get(campaignName)
-        activeCount = getActiveListLength(listLengths, campaignName)
-        cutOff <- sentDates
-          .sortBy(_.timestamp)(reverseChrono)
-          .drop(unOpenCount - 1)
-          .headOption
-          .map(send => NewsletterCutOff(campaignName, send.timestamp, activeCount))
-      } yield cutOff
-
-    campaignSentDates.groupBy(_.campaignName)
-      .toList
-      .flatMap { case (campaignName, sentDates ) => extractCutOffBasedOnCampaign(campaignName, sentDates) }
-  }
 }
 
 object Newsletters {

@@ -1,10 +1,13 @@
 package com.gu.newsletterlistcleanse
 
+import cats.data.EitherT
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
+import com.gu.newsletterlistcleanse.services.{CutOffDatesService, Newsletter, Newsletters}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.beans.BeanProperty
+import scala.concurrent.Future
 
 case class GetCutOffDatesLambdaInput(
   @BeanProperty
@@ -22,11 +25,20 @@ class Lambda {
   val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
   val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
+  val newsletters: Newsletters = new Newsletters()
 
-  val cutOffDatesStep = new GetCutOffDatesLambda(databaseOperations)
+  val cutOffDatesStep = new CutOffDatesService(databaseOperations)
 
   def handler(): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
+  }
+
+  def fetchNewsletters(newslettersToProcess: List[String]): EitherT[Future, String, List[Newsletter]] = {
+    if (newslettersToProcess.nonEmpty) {
+      newsletters.fetchNewsletters(newslettersToProcess)
+    } else {
+      newsletters.fetchNewsletters()
+    }
   }
 }
