@@ -14,7 +14,7 @@ class CutOffDatesService(databaseOperations: DatabaseOperations) {
 
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  def calculateCutOffDates(newslettersToProcess: List[Newsletter]): Either[String, List[NewsletterCutOffWithBraze]] = {
+  def fetchAndComputeCutOffDates(newslettersToProcess: List[Newsletter]): Either[String, List[NewsletterCutOffWithBraze]] = {
 
     def addBrazeData(cutOff: NewsletterCutOff): Either[String, NewsletterCutOffWithBraze] = {
       newslettersToProcess

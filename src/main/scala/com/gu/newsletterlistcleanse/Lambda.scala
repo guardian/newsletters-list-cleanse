@@ -1,7 +1,9 @@
 package com.gu.newsletterlistcleanse
 
+import cats.implicits._
 import cats.data.EitherT
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.services.lambda.runtime.Context
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.Newsletter
 import com.gu.newsletterlistcleanse.services.{CutOffDatesService, NewslettersApiClient}
@@ -9,6 +11,7 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.beans.BeanProperty
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class GetCutOffDatesLambdaInput(
   @BeanProperty
@@ -30,9 +33,16 @@ class Lambda {
 
   val cutOffDatesStep = new CutOffDatesService(databaseOperations)
 
-  def handler(): Unit = {
+  def handler(lambdaInput: GetCutOffDatesLambdaInput, context: Context): Unit = {
     val env = Env()
     logger.info(s"Starting $env")
+    for {
+      newslettersToProcess <- fetchNewsletters(lambdaInput.newslettersToProcess.toList)
+      cutOffDates <- EitherT.fromEither[Future](cutOffDatesStep.fetchAndComputeCutOffDates(newslettersToProcess))
+    } yield {
+      cutOffDates
+    }
+
   }
 
   def fetchNewsletters(newslettersToProcess: List[String]): EitherT[Future, String, List[Newsletter]] = {
