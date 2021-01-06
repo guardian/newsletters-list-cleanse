@@ -3,7 +3,9 @@ package com.gu.newsletterlistcleanse
 import cats.implicits._
 import cats.data.EitherT
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.Newsletter
 import com.gu.newsletterlistcleanse.services.{CutOffDatesService, NewslettersApiClient}
@@ -28,10 +30,14 @@ class Lambda {
 
   val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
+  val s3Client: AmazonS3 = AmazonS3ClientBuilder.standard
+    .withCredentials(credentialProvider)
+    .withRegion(Regions.EU_WEST_1).build
   val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
   val newsletters: NewslettersApiClient = new NewslettersApiClient()
 
   val cutOffDatesStep = new CutOffDatesService(databaseOperations)
+  val getCleanseListStep = new GetCleanseListLambda(config, s3Client, databaseOperations)
 
   def handler(lambdaInput: GetCutOffDatesLambdaInput, context: Context): Unit = {
     val env = Env()
