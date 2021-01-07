@@ -10,7 +10,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.Newsletter
-import com.gu.newsletterlistcleanse.services.{CleanseListService, CutOffDatesService, NewslettersApiClient}
+import com.gu.newsletterlistcleanse.services.{CleanseListService, CutOffDatesService, NewslettersApiClient, BrazeUsersService}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.beans.BeanProperty
@@ -43,7 +43,7 @@ class Lambda {
 
   val cutOffDatesService = new CutOffDatesService(databaseOperations)
   val cleanseListService = new CleanseListService(config, s3Client, databaseOperations)
-  val brazeService = new UpdateBrazeUsersLambda(config)
+  val brazeService = new BrazeUsersService(config)
 
   def handler(lambdaInput: GetCutOffDatesLambdaInput, context: Context): Unit = {
     val env = Env()

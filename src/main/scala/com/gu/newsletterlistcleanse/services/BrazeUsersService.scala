@@ -1,20 +1,19 @@
-package com.gu.newsletterlistcleanse
+package com.gu.newsletterlistcleanse.services
 
 import java.time.Instant
 
 import cats.data.EitherT
 import cats.implicits._
-
 import com.gu.newsletterlistcleanse.EitherConverter.EitherList
-import com.gu.newsletterlistcleanse.services.{BrazeClient, BrazeError, BrazeNewsletterSubscriptionsUpdate, SimpleBrazeResponse, UserExportRequest, UserTrackRequest}
+import com.gu.newsletterlistcleanse.NewsletterConfig
 import com.gu.newsletterlistcleanse.models.{BrazeData, CleanseList}
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 
-class UpdateBrazeUsersLambda(config: NewsletterConfig) {
+class BrazeUsersService(config: NewsletterConfig) {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
   val brazeClient = new BrazeClient
