@@ -51,7 +51,7 @@ class Lambda {
     val updateResults = for {
       newslettersToProcess <- fetchNewsletters(lambdaInput.newslettersToProcess.toList)
       cutOffDates <- EitherT.fromEither[Future](cutOffDatesService.fetchAndComputeCutOffDates(newslettersToProcess))
-      cleanseLists = cleanseListService.process(cutOffDates, Some(context))
+      cleanseLists = cleanseListService.fetchCleanseLists(cutOffDates, Option(context), env)
       result <- brazeService.getBrazeResults(cleanseLists)
     } yield result
 
@@ -60,7 +60,7 @@ class Lambda {
         logger.error(error)
         throw new RuntimeException("Errors encountered during list cleanse")
       case Right(success) =>
-        logger.info(s"Updated ${success.length} users in Braze")
+        logger.info(s"Updated ${success.length} batches of users in Braze")
     }
   }
 

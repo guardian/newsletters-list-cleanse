@@ -41,6 +41,9 @@ libraryDependencies ++= Seq(
   "com.softwaremill.sttp.client" %% "async-http-client-backend-future" % "2.2.7",
   "org.typelevel" %% "cats-core" % "2.1.1",
 )
+
+fork := true
+
 assemblyJarName := s"${name.value}.jar"
 assemblyMergeStrategy in assembly := {
   case "META-INF/MANIFEST.MF" => MergeStrategy.discard

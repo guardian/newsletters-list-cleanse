@@ -31,12 +31,11 @@ class CleanseListService(config: NewsletterConfig, s3Client: AmazonS3, databaseO
     }
   }
 
-  def process(campaignCutOffDates: List[NewsletterCutOffWithBraze], contextOption: Option[Context]): List[CleanseList]  = {
-    val env = Env()
-    logger.info(s"Starting $env")
+  def fetchCleanseLists(campaignCutOffDates: List[NewsletterCutOffWithBraze], contextOption: Option[Context], env: Env): List[CleanseList]  = {
 
     for {
       campaignCutOffWithBraze <- campaignCutOffDates
+      _ = logger.info(s"Fetching cleanse list for ${campaignCutOffWithBraze.newsletterCutOff.newsletterName}")
       campaignCutOff = campaignCutOffWithBraze.newsletterCutOff
       brazeData = campaignCutOffWithBraze.brazeData
       userIds = fetchCampaignCleanseList(campaignCutOff)
