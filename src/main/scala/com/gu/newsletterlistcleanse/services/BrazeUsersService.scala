@@ -1,51 +1,24 @@
-package com.gu.newsletterlistcleanse
+package com.gu.newsletterlistcleanse.services
 
 import java.time.Instant
-import java.util.concurrent.TimeUnit
-import com.amazonaws.auth.AWSCredentialsProvider
-import com.amazonaws.services.lambda.runtime.events.SQSEvent
+
+import cats.data.EitherT
+import cats.implicits._
 import com.gu.newsletterlistcleanse.EitherConverter.EitherList
-import com.gu.newsletterlistcleanse.services.{BrazeClient, BrazeError, BrazeNewsletterSubscriptionsUpdate, SimpleBrazeResponse, UserExportRequest, UserTrackRequest}
+import com.gu.newsletterlistcleanse.NewsletterConfig
 import com.gu.newsletterlistcleanse.models.{BrazeData, CleanseList}
-import com.gu.newsletterlistcleanse.sqs.SqsMessageParser
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
+import scala.concurrent.Future
 
 
-class UpdateBrazeUsersLambda {
+class BrazeUsersService(config: NewsletterConfig) {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
-
-  val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
-  val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
-  val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
   val brazeClient = new BrazeClient
 
   private val archiveFilterSet = config.archiveFilterSet
-
-  def handler(sqsEvent: SQSEvent): Unit = {
-    val env = Env()
-    logger.info(s"Starting $env")
-    SqsMessageParser.parse[CleanseList](sqsEvent) match {
-      case Right(cleanseLists) =>
-        resolveBrazeUpdates(cleanseLists)
-      case Left(parseErrors) =>
-        parseErrors.foreach(e => logger.error(e.getMessage))
-    }
-  }
-
-  private def resolveBrazeUpdates(cleanseLists: List[CleanseList]) = {
-    val brazeResults = Await.result(getBrazeResults(cleanseLists), timeout)
-    brazeResults match {
-      case Left(brazeErrors) =>
-        brazeErrors.foreach(e => logger.error(s"Error updating Braze with Code ${e.code}: ${e.body}"))
-      case Right(_) => logger.info("Successfully updated Braze")
-    }
-  }
 
   private def getInvalidUsers(userIds: List[String]): Future[Either[BrazeError, List[String]]] =
     brazeClient.getInvalidUsers(config.brazeApiToken, UserExportRequest(userIds))
@@ -89,27 +62,24 @@ class UpdateBrazeUsersLambda {
     Future.sequence(brazeResponses).map(brazeResponse => brazeResponse.toEitherList)
   }
 
-  def getBrazeResults(cleanseLists: List[CleanseList]): Future[Either[List[BrazeError], List[SimpleBrazeResponse]]] = {
+  def getBrazeResults(cleanseLists: List[CleanseList]): EitherT[Future, String, List[SimpleBrazeResponse]] = {
     val newsletterList = cleanseLists.map(_.newsletterName).mkString(", ")
     val totalUsers = cleanseLists.map(_.userIdList.length).sum
     logger.info(s"Processing $newsletterList, total of $totalUsers users to update")
     if (config.dryRun) logger.info("Running in dry-run mode, won't update Braze")
-    getAllInvalidUsers(cleanseLists)
+    val result = getAllInvalidUsers(cleanseLists)
       .flatMap {
         case Left(e) => Future.successful(Left(e))
         case Right(invalidUsers) =>
           sendBrazeUpdates(cleanseLists, invalidUsers.toSet)
       }
-  }
-}
-
-object TestUpdateBrazeUsers {
-  def main(args: Array[String]): Unit = {
-    val cleanseLists = List(CleanseList("Editorial_AnimalsFarmed", List("user_1_jrb", "user_2_jrb", "mystery_user 1"),
-      BrazeData("AnimalsFarmed_Subscribe_Email", "animals_farmed")))
-    val updateBrazeUsersLambda = new UpdateBrazeUsersLambda()
-    val result = Try(Await.result(updateBrazeUsersLambda.getBrazeResults(cleanseLists), updateBrazeUsersLambda.timeout))
-    Await.result(updateBrazeUsersLambda.brazeClient.sttpBackend.close(), Duration(15, TimeUnit.SECONDS))
-    println(result)
+    EitherT(result)
+      .leftMap { errors =>
+        if (errors.length > 20) {
+          logger.error("Encountered more than 20 errors, will only display the first 20")
+        }
+        errors.take(20).foreach(e => logger.error(s"HTTP ${e.code}, ${e.body}"))
+        "Error(s) encountered while updating users in Braze"
+      }
   }
 }

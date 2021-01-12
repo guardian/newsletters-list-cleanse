@@ -7,9 +7,7 @@ deployments:
     parameters:
       bucket: identity-lambda
       functionNames:
-        - newsletter-cleanse-update-braze-users-
-        - newsletter-cleanse-get-cut-off-dates-
-        - newsletter-cleanse-get-cleanse-list-
+        - newsletter-cleanse-
       fileName: newsletter-list-cleanse.jar
       prefixStack: false
     dependencies: [newsletter-list-cleanse-cfn]

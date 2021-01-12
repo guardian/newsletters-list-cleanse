@@ -2,36 +2,24 @@
 
 A monthly job to clean newsletter mailing lists of lapsed subscribers.
 
-## Structure ##
+The job is a single lambda that is executing three steps:
+ - In the datalake, Identify the "cut-off date" for each newsletter. It determines how long a user has to be inactive to be considered as "lapsed"
+ - Fetch the list of users that have lapsed from the datalake.
+ - Update these users in braze such that they aren't subscribed anymore.  
 
-The job is split into three lambdas that are joined together using SQS.
+## Run locally
 
-* **getCutOffDates**: Get the cut off dates for all newsletters.
-* **getCleanseList**: Use the cut off dates to get a list of users to be removed from this distribution list. 
-This is done on a per-newsletter basis.
-* **updateBrazeUsers**: Update Braze using the cleanse list.
+You'll need a file in `~/.gu/newsletter-list-cleanse.conf` that contains all the keys defined in SSM under `/identity/newsletter-list-cleanse/CODE/`
+
+Ensure the `dryRun` config value is either undefined or set to `true` before running the program. If you need to test the braze update, ensure you're pointing to the test Braze environment.
+
+```sbtshell
+test:run
+```
 
 ## Test locally
 
-### GetCutOffDatesLambda
-
 ```sbtshell
-eval System.setProperty("Stage", "CODE")
-runMain com.gu.newsletterlistcleanse.TestGetCutOffDates
+test
 ```
-
-### GetCleanseListLambda
-
-```sbtshell
-eval System.setProperty("Stage", "CODE")
-runMain com.gu.newsletterlistcleanse.TestGetCleanseList
-```
-
-### UpdateBrazeUsersLambda
-
-```sbtshell
-eval System.setProperty("Stage", "CODE")
-runMain com.gu.newsletterlistcleanse.TestUpdateBrazeUsers
-```
-
 

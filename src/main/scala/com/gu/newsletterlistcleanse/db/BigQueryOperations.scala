@@ -4,11 +4,10 @@ import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, ZoneId, ZonedDateTime}
 
-import com.gu.newsletterlistcleanse.models.NewsletterCutOff
+import com.gu.newsletterlistcleanse.models.{NewsletterCutOff, Newsletters}
 import com.google.cloud.bigquery.{BigQuery, BigQueryOptions, FieldValueList, QueryJobConfiguration, QueryParameterValue}
 import com.google.auth.Credentials
 import com.google.auth.oauth2.ServiceAccountCredentials
-import com.gu.newsletterlistcleanse.services.Newsletters
 
 import scala.collection.JavaConverters._
 
