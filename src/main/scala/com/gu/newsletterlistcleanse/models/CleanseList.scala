@@ -4,12 +4,13 @@ import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.{deriveDecoder, deriveEncoder}
 
 
-case class CleanseList(newsletterName: String, userIdList: List[String], brazeData: BrazeData){
-  def getCleanseListBatches(usersPerMessage: Int): List[CleanseList] = {
-    this.userIdList.grouped(usersPerMessage).toList
-      .map(chunk => CleanseList(this.newsletterName, chunk, this.brazeData))
-  }
-}
+case class CleanseList(
+  newsletterName: String,
+  userIdList: List[String],
+  activeListLength: Int,
+  deletionCandidates: Int,
+  brazeData: BrazeData
+)
 
 object CleanseList {
   implicit val cleanseListEncoder: Encoder[CleanseList] = deriveEncoder

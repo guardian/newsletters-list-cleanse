@@ -8,9 +8,10 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
+import com.amazonaws.services.sns.{AmazonSNS, AmazonSNSClientBuilder}
 import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.Newsletter
-import com.gu.newsletterlistcleanse.services.{CleanseListService, CutOffDatesService, NewslettersApiClient, BrazeUsersService}
+import com.gu.newsletterlistcleanse.services.{BrazeUsersService, CleanseListService, CutOffDatesService, NewslettersApiClient, ReportService}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.beans.BeanProperty
@@ -40,13 +41,19 @@ class Lambda {
   val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
   val s3Client: AmazonS3 = AmazonS3ClientBuilder.standard
     .withCredentials(credentialProvider)
-    .withRegion(Regions.EU_WEST_1).build
+    .withRegion(Regions.EU_WEST_1)
+    .build()
+  val snsClient: AmazonSNS = AmazonSNSClientBuilder.standard
+    .withCredentials(credentialProvider)
+    .withRegion(Regions.EU_WEST_1)
+    .build()
   val databaseOperations: DatabaseOperations = new BigQueryOperations(config.serviceAccount, config.projectId)
   val newsletters: NewslettersApiClient = new NewslettersApiClient()
 
   val cutOffDatesService = new CutOffDatesService(databaseOperations)
   val cleanseListService = new CleanseListService(config, s3Client, databaseOperations)
   val brazeService = new BrazeUsersService(config)
+  val reportService = new ReportService(snsClient, config)
 
   def handler(lambdaInput: GetCutOffDatesLambdaInput, context: Context): Unit = {
     val env = Env()
@@ -58,6 +65,7 @@ class Lambda {
       cutOffDates <- EitherT.fromEither[Future](cutOffDatesService.fetchAndComputeCutOffDates(newslettersToProcess))
       cleanseLists = cleanseListService.fetchCleanseLists(cutOffDates, Option(context), env)
       result <- brazeService.getBrazeResults(cleanseLists, dryRun)
+      _ = reportService.sendReport(cleanseLists, env, dryRun)
     } yield result
 
     Await.result(updateResults.value, timeout) match {
