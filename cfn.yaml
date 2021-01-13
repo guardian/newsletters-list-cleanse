@@ -81,7 +81,7 @@ Resources:
               Effect: Allow
               Action:
                 - sns:Publish
-              Resource: !Sub arn:aws:s3:::${BackupBucket}/*
+              Resource: !Ref ReportSNS
 
   NewsletterCleanseLambda:
     Type: AWS::Lambda::Function
