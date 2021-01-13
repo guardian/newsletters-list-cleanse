@@ -20,11 +20,14 @@ import scala.concurrent.duration.Duration
 
 case class GetCutOffDatesLambdaInput(
   @BeanProperty
-  var newslettersToProcess: Array[String]
+  var newslettersToProcess: Array[String],
+  @BeanProperty
+  var dryRun: Boolean
 ) {
   // set a default constructor so Jackson is able to instantiate the class as a java bean
   def this() = this(
-    newslettersToProcess = new Array[String](0)
+    newslettersToProcess = new Array[String](0),
+    dryRun = true
   )
 }
 
@@ -47,12 +50,14 @@ class Lambda {
 
   def handler(lambdaInput: GetCutOffDatesLambdaInput, context: Context): Unit = {
     val env = Env()
+    val dryRun = config.dryRun || lambdaInput.dryRun
     logger.info(s"Starting $env")
+    logger.info(s"DryRun: $dryRun (config says ${config.dryRun} and event says ${lambdaInput.dryRun})")
     val updateResults = for {
       newslettersToProcess <- fetchNewsletters(lambdaInput.newslettersToProcess.toList)
       cutOffDates <- EitherT.fromEither[Future](cutOffDatesService.fetchAndComputeCutOffDates(newslettersToProcess))
       cleanseLists = cleanseListService.fetchCleanseLists(cutOffDates, Option(context), env)
-      result <- brazeService.getBrazeResults(cleanseLists)
+      result <- brazeService.getBrazeResults(cleanseLists, dryRun)
     } yield result
 
     Await.result(updateResults.value, timeout) match {

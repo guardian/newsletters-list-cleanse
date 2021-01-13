@@ -62,11 +62,11 @@ class BrazeUsersService(config: NewsletterConfig) {
     Future.sequence(brazeResponses).map(brazeResponse => brazeResponse.toEitherList)
   }
 
-  def getBrazeResults(cleanseLists: List[CleanseList]): EitherT[Future, String, List[SimpleBrazeResponse]] = {
+  def getBrazeResults(cleanseLists: List[CleanseList], dryRun: Boolean): EitherT[Future, String, List[SimpleBrazeResponse]] = {
     val newsletterList = cleanseLists.map(_.newsletterName).mkString(", ")
     val totalUsers = cleanseLists.map(_.userIdList.length).sum
     logger.info(s"Processing $newsletterList, total of $totalUsers users to update")
-    if (config.dryRun) logger.info("Running in dry-run mode, won't update Braze")
+    if (dryRun) logger.info("Running in dry-run mode, won't update Braze")
     val result = getAllInvalidUsers(cleanseLists)
       .flatMap {
         case Left(e) => Future.successful(Left(e))
