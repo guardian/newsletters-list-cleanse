@@ -25,6 +25,13 @@ Parameters:
     Description: Bucket where we temporarily store which users are removed from the mailing list
     Type: String
 
+Mappings:
+  Constants:
+    CODE:
+      MonthlyRun: DISABLED
+    PROD:
+      MonthlyRun: ENABLED
+
 Resources:
   ExecutionRole:
     Type: AWS::IAM::Role
@@ -68,6 +75,13 @@ Resources:
               Action:
                 - s3:PutObject
               Resource: !Sub arn:aws:s3:::${BackupBucket}/*
+        - PolicyName: sns
+          PolicyDocument:
+            Statement:
+              Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref ReportSNS
 
   NewsletterCleanseLambda:
     Type: AWS::Lambda::Function
@@ -89,20 +103,53 @@ Resources:
       Runtime: java8
       Timeout: 900
 
-  DailyEvent:
+  MonthlyEvent:
     Type: AWS::Events::Rule
     Properties:
-      Description: Event sent to process the previous day of data
-      ScheduleExpression: cron(15 10 ? 1/1 TUE#1 *)
-      State: ENABLED
+      Description: Event sent to run the list cleansing
+      ScheduleExpression: cron(15 10 ? 1/1 TUE#2 *)
+      State: !FindInMap [Constants, !Ref Stage, MonthlyRun]
       Targets:
         - Id: Lambda
           Arn: !GetAtt NewsletterCleanseLambda.Arn
+          Input: '{"dryRun": false}'
 
-  DailyEventLambdaPermission:
+  MonthlyEventLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt NewsletterCleanseLambda.Arn
       Principal: events.amazonaws.com
-      SourceArn: !GetAtt DailyEvent.Arn
+      SourceArn: !GetAtt MonthlyEvent.Arn
+
+  MonthlyDryRunEvent:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Event sent to dry-run the list cleansing
+      ScheduleExpression: cron(15 10 ? 1/1 TUE#1 *)
+      State: !FindInMap [Constants, !Ref Stage, MonthlyRun]
+      Targets:
+        - Id: Lambda
+          Arn: !GetAtt NewsletterCleanseLambda.Arn
+          Input: '{"dryRun": true}'
+
+  MonthlyDryRunEventLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NewsletterCleanseLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MonthlyDryRunEvent.Arn
+
+  ReportSNS:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${App}-report-${Stage}
+      DisplayName: !Sub Newletter list cleanse report topic for ${Stage}
+      Tags:
+        - Key: App
+          Value : !Ref App
+        - Key: Stack
+          Value : !Ref Stack
+        - Key: Stage
+          Value: !Ref Stage

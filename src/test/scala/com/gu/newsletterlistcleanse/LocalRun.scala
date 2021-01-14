@@ -9,7 +9,7 @@ object LocalRun {
     // full run
     //val input = GetCutOffDatesLambdaInput()
     // partial run
-    val input = GetCutOffDatesLambdaInput(Array("Editorial_AnimalsFarmed"))
+    val input = GetCutOffDatesLambdaInput(Array("Editorial_AnimalsFarmed"), dryRun = true)
     val lambda = new Lambda()
 
     // force the JVM to shutdown, some of our clients have a threadpool that isn't marked as `Daemon`.

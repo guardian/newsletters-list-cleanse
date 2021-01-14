@@ -12,7 +12,8 @@ case class NewsletterConfig(
   archiveFilterSet: Set[String],
   dryRun: Boolean,
   backupBucketName: String,
-  subscribeUsers: Boolean
+  subscribeUsers: Boolean,
+  snsTopicArn: String,
 )
 
 object NewsletterConfig {
@@ -29,6 +30,7 @@ object NewsletterConfig {
       dryRun = if (config.hasPathOrNull("dryRun")) config.getBoolean("dryRun") else true,
       backupBucketName = config.getString("backupBucketName"),
       subscribeUsers = if (config.hasPathOrNull("subscribeUsers")) config.getBoolean("subscribeUsers") else false,
+      snsTopicArn = config.getString("snsTopicArn"),
     )
   }
 }

@@ -39,12 +39,14 @@ class CleanseListService(config: NewsletterConfig, s3Client: AmazonS3, databaseO
       campaignCutOff = campaignCutOffWithBraze.newsletterCutOff
       brazeData = campaignCutOffWithBraze.brazeData
       userIds = fetchCampaignCleanseList(campaignCutOff)
-      cleanseList = CleanseList(
-        campaignCutOff.newsletterName,
-        userIds,
-        brazeData
-      )
     } yield {
+      val cleanseList = CleanseList(
+        newsletterName = campaignCutOff.newsletterName,
+        activeListLength = campaignCutOff.activeListLength,
+        deletionCandidates = userIds.length,
+        userIdList = userIds,
+        brazeData = brazeData,
+      )
       logger.info(s"Found ${userIds.length} users of ${campaignCutOff.activeListLength} to remove from ${campaignCutOff.newsletterName}")
       exportCleanseListToS3(cleanseList, env, contextOption)
       cleanseList
