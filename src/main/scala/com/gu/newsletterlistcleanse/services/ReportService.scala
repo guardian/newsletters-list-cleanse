@@ -17,7 +17,7 @@ class ReportService(amazonSns: AmazonSNS, config: NewsletterConfig) {
       .sortBy(_.newsletterName)
       .map { cl =>
         val newCount = cl.activeListLength - cl.deletionCandidates
-        val percentage = cl.deletionCandidates / cl.activeListLength
+        val percentage = cl.deletionCandidates.toDouble / cl.activeListLength.toDouble * 100
         val formattedPercentage = percentageFormat.format(percentage)
         s"${cl.newsletterName}\t${cl.deletionCandidates}\t${cl.activeListLength}\t$newCount\t$formattedPercentage"
       }
