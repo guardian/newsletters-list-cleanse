@@ -18,7 +18,7 @@ class ReportService(amazonSns: AmazonSNS, config: NewsletterConfig) {
       .map { cl =>
         val newCount = cl.activeListLength - cl.deletionCandidates
         val percentage: Double = if (cl.activeListLength != 0) {
-          cl.deletionCandidates.toDouble / cl.activeListLength.toDouble * 100
+          (cl.deletionCandidates.toDouble / cl.activeListLength.toDouble) * 100
         } else {
           0
         }
