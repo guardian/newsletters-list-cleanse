@@ -10,7 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 class ReportService(amazonSns: AmazonSNS, config: NewsletterConfig) {
   val logger: Logger = LoggerFactory.getLogger(this.getClass)
 
-  private val percentageFormat = new DecimalFormat("#.###%")
+  private val percentageFormat = new DecimalFormat("#.##%")
 
   def sendReport(cleanseLists: List[CleanseList], env: Env, dryRun: Boolean): Unit = {
     val lines = cleanseLists
@@ -18,7 +18,7 @@ class ReportService(amazonSns: AmazonSNS, config: NewsletterConfig) {
       .map { cl =>
         val newCount = cl.activeListLength - cl.deletionCandidates
         val percentage: Double = if (cl.activeListLength != 0) {
-          (cl.deletionCandidates.toDouble / cl.activeListLength.toDouble) * 100
+          (cl.deletionCandidates.toDouble / cl.activeListLength.toDouble)
         } else {
           0
         }
