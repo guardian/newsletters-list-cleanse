@@ -13,6 +13,7 @@ import com.gu.newsletterlistcleanse.db.{BigQueryOperations, DatabaseOperations}
 import com.gu.newsletterlistcleanse.models.Newsletter
 import com.gu.newsletterlistcleanse.services.{BrazeUsersService, CleanseListService, CutOffDatesService, NewslettersApiClient, ReportService}
 import org.slf4j.{Logger, LoggerFactory}
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 
 import scala.beans.BeanProperty
 import scala.concurrent.{Await, Future}
@@ -37,8 +38,10 @@ class Lambda {
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
-  val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialProvider()
-  val config: NewsletterConfig = NewsletterConfig.load(credentialProvider)
+  val credentialProvider: AWSCredentialsProvider = NewsletterSQSAWSCredentialProvider.credentialsProviderV1
+  val credentialProviderV2: AwsCredentialsProvider = NewsletterSQSAWSCredentialProvider.credentialsProviderV2
+
+  val config: NewsletterConfig = NewsletterConfig.load(credentialProviderV2)
   val s3Client: AmazonS3 = AmazonS3ClientBuilder.standard
     .withCredentials(credentialProvider)
     .withRegion(Regions.EU_WEST_1)
