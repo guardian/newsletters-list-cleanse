@@ -37,8 +37,8 @@ class Lambda {
 
   val timeout: Duration = Duration(15, TimeUnit.MINUTES)
 
-  val credentialProvider: AWSCredentialsProvider = new NewsletterSQSAWSCredentialsProviderV1()
-  val credentialProviderV2: AwsCredentialsProvider = NewsletterSQSAwsCredentialsProviderV2.credentialsProvider
+  val credentialProvider: AWSCredentialsProvider = NewsletterSQSAWSCredentialsProvider.credentialsProviderV1
+  val credentialProviderV2: AwsCredentialsProvider = NewsletterSQSAWSCredentialsProvider.credentialsProviderV2
 
   val config: NewsletterConfig = NewsletterConfig.load(credentialProviderV2)
   val s3Client: AmazonS3 = AmazonS3ClientBuilder.standard

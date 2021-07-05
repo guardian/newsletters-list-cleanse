@@ -9,14 +9,15 @@ import software.amazon.awssdk.auth.credentials.{
   DefaultCredentialsProvider => DefaultCredentialsProviderV2
 }
 
-class NewsletterSQSAWSCredentialsProviderV1 extends AWSCredentialsProviderChain(
-  new ProfileCredentialsProvider("identity"),
-  DefaultAWSCredentialsProviderChain.getInstance())
-
-object NewsletterSQSAwsCredentialsProviderV2 {
-  val credentialsProvider: AwsCredentialsProviderV2 = AwsCredentialsProviderChainV2
+object NewsletterSQSAWSCredentialsProvider {
+  val credentialsProviderV1: NewsletterSQSAWSCredentialsProviderV1 = new NewsletterSQSAWSCredentialsProviderV1()
+  val credentialsProviderV2: AwsCredentialsProviderV2 = AwsCredentialsProviderChainV2
     .builder()
     .addCredentialsProvider(ProfileCredentialsProviderV2.create("identity"))
     .addCredentialsProvider(DefaultCredentialsProviderV2.create())
     .build()
+
+  class NewsletterSQSAWSCredentialsProviderV1 extends AWSCredentialsProviderChain(
+    new ProfileCredentialsProvider("identity"),
+    DefaultAWSCredentialsProviderChain.getInstance())
 }
