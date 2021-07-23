@@ -1,8 +1,8 @@
 package com.gu.newsletterlistcleanse
 
-import com.amazonaws.auth.AWSCredentialsProvider
 import com.gu.{AppIdentity, AwsIdentity}
 import com.gu.conf.{ConfigurationLoader, SSMConfigurationLocation}
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import scala.collection.JavaConverters._
 
 case class NewsletterConfig(
@@ -17,7 +17,7 @@ case class NewsletterConfig(
 )
 
 object NewsletterConfig {
-  def load(credentialProvider: AWSCredentialsProvider): NewsletterConfig = {
+  def load(credentialProvider: AwsCredentialsProvider): NewsletterConfig = {
     val identity = AppIdentity.whoAmI(defaultAppName = "newsletter-list-cleanse", credentialProvider)
     val config = ConfigurationLoader.load(identity, credentialProvider) {
       case identity: AwsIdentity => SSMConfigurationLocation(s"/${identity.stack}/${identity.app}/${identity.stage}")
