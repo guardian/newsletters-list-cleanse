@@ -59,6 +59,8 @@ object Newsletters {
     "Editorial_TeacherNetwork" -> 13,
     "Editorial_DesignReview" -> 7,
     "Editorial_AustraliaUSelection" -> 61,
+    "Editorial_Tokyo2020DailyBriefing" -> 94,
+    "Editorial_TechScape" -> 13,
     // "Editorial_WeekendPapers" -> 94, => Marketing
     // "Editorial_OFM" -> 94, => Marketing
     // "MK_FrontPage" -> 94, => Marketing
