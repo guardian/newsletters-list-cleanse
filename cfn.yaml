@@ -100,7 +100,7 @@ Resources:
       Handler: com.gu.newsletterlistcleanse.Lambda::handler
       MemorySize: 1024
       Role: !GetAtt ExecutionRole.Arn
-      Runtime: java8
+      Runtime: java8.al2
       Timeout: 900
 
   MonthlyEvent:
