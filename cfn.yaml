@@ -30,7 +30,7 @@ Mappings:
     CODE:
       MonthlyRun: DISABLED
     PROD:
-      MonthlyRun: ENABLED
+      MonthlyRun: DISABLED
 
 Resources:
   ExecutionRole:
