@@ -1,11 +1,14 @@
-# newsletter-list-cleanse
+# newsletter-list-cleanse [DEPRECATED]
+
+**_ This job to clean our subscriber lists of inactive readers is no longer used and is deprecated _**
 
 A monthly job to clean newsletter mailing lists of lapsed subscribers.
 
 The job is a single lambda that is executing three steps:
- - In the datalake, Identify the "cut-off date" for each newsletter. It determines how long a user has to be inactive to be considered as "lapsed"
- - Fetch the list of users that have lapsed from the datalake.
- - Update these users in braze such that they aren't subscribed anymore.  
+
+- In the datalake, Identify the "cut-off date" for each newsletter. It determines how long a user has to be inactive to be considered as "lapsed"
+- Fetch the list of users that have lapsed from the datalake.
+- Update these users in braze such that they aren't subscribed anymore.
 
 ## Run locally
 
@@ -22,4 +25,3 @@ test:run
 ```sbtshell
 test
 ```
-
